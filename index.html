@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泳课预约 · SwimSignup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --ink: #0a2a3f; --ink-soft: #2c4a5e; --ink-mute: #6b8294;
+  --paper: #f4f1ea; --paper-warm: #ebe5d6;
+  --water: #4a8db8; --water-deep: #2c5f85; --water-light: #a8d0e6;
+  --coral: #e07856; --green: #5a8a5e; --green-light: #d4e8d4;
+  --amber: #c9a961; --amber-light: #f0e3c0;
+  --line: #d6cfbe; --shadow: rgba(10, 42, 63, 0.08);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Manrope', sans-serif; background: var(--paper); color: var(--ink); font-size: 15px; line-height: 1.55; min-height: 100vh; background-image: radial-gradient(ellipse at top right, rgba(168, 208, 230, 0.18) 0%, transparent 50%), radial-gradient(ellipse at bottom left, rgba(224, 120, 86, 0.06) 0%, transparent 45%); }
+.topbar { background: var(--paper-warm); border-bottom: 1px solid var(--line); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(8px); }
+.brand { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.brand-mark { width: 32px; height: 32px; background: var(--water-deep); border-radius: 50%; position: relative; overflow: hidden; }
+.brand-mark::before { content: ''; position: absolute; bottom: 0; left: -10%; width: 120%; height: 55%; background: var(--water-light); border-radius: 50% 50% 0 0 / 80% 80% 0 0; animation: wave 4s ease-in-out infinite; }
+@keyframes wave { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-2px) rotate(2deg); } }
+.brand-name { display: flex; flex-direction: column; line-height: 1.1; }
+.brand-name small { font-size: 11px; color: var(--ink-mute); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; }
+.role-switch { display: flex; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 3px; font-size: 13px; align-items: center; }
+.role-btn { padding: 6px 16px; border: none; background: transparent; color: var(--ink-mute); cursor: pointer; border-radius: 999px; font-family: inherit; font-weight: 500; transition: all 0.2s; }
+.role-btn.active { background: var(--ink); color: var(--paper); }
+.coach-status { font-size: 11px; color: var(--ink-mute); padding: 0 8px; }
+.coach-status .signed-in { color: var(--green); font-weight: 600; }
+.app { max-width: 1240px; margin: 0 auto; padding: 32px 28px 80px; }
+.page-header { margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+.page-title { font-family: 'Fraunces', serif; font-size: 42px; font-weight: 400; letter-spacing: -0.02em; line-height: 1.05; }
+.page-title em { font-style: italic; color: var(--water-deep); }
+.page-sub { color: var(--ink-mute); margin-top: 8px; font-size: 14px; }
+.action-bar { display: flex; gap: 10px; flex-wrap: wrap; }
+button.primary, button.ghost, button.accent { font-family: inherit; font-weight: 500; font-size: 14px; padding: 11px 20px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; transition: all 0.18s; letter-spacing: -0.005em; }
+button.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+button.primary:hover { background: var(--water-deep); border-color: var(--water-deep); transform: translateY(-1px); box-shadow: 0 6px 16px var(--shadow); }
+button.primary:disabled { background: var(--ink-mute); border-color: var(--ink-mute); cursor: wait; transform: none; }
+button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+button.ghost:hover { background: var(--paper-warm); border-color: var(--ink-mute); }
+button.accent { background: var(--coral); color: white; border-color: var(--coral); }
+button.accent:hover { background: #c66647; border-color: #c66647; }
+.view { display: none; animation: fadeIn 0.3s ease; }
+.view.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.week-nav { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+.week-nav button { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--paper); cursor: pointer; font-size: 16px; color: var(--ink); transition: all 0.15s; }
+.week-nav button:hover { background: var(--paper-warm); border-color: var(--ink-mute); }
+.week-label { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 400; }
+.week-status { font-size: 12px; padding: 4px 10px; border-radius: 999px; font-weight: 600; letter-spacing: 0.04em; }
+.week-status.published { background: var(--green-light); color: var(--green); }
+.week-status.draft { background: #f0e0d0; color: var(--coral); }
+.calendar { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px var(--shadow); }
+.cal-grid { display: grid; grid-template-columns: 70px repeat(7, 1fr); }
+.cal-head { background: var(--paper-warm); padding: 12px 8px; text-align: center; border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+.cal-head .day-num { display: block; font-family: 'Fraunces', serif; font-size: 20px; font-weight: 400; color: var(--ink); margin-top: 2px; text-transform: none; letter-spacing: 0; }
+.cal-head.today { background: var(--water-deep); color: var(--paper); }
+.cal-head.today .day-num { color: var(--paper); }
+.cal-time { padding: 6px 8px; text-align: right; font-size: 11px; color: var(--ink-mute); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; font-weight: 500; }
+.cal-time.half { color: var(--ink-mute); opacity: 0.55; font-size: 10px; }
+.cal-cell { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); min-height: 38px; padding: 3px; position: relative; cursor: pointer; transition: background 0.15s; }
+.cal-cell.half-row { border-bottom: 1px dashed var(--line); }
+.cal-cell:nth-child(8n) { border-right: none; }
+.cal-cell.empty:hover { background: rgba(168, 208, 230, 0.15); }
+.cal-cell.released { background: rgba(168, 208, 230, 0.18); }
+.cal-cell.released:hover { background: rgba(168, 208, 230, 0.32); }
+.cal-cell.released::before { content: '✓'; position: absolute; top: 2px; right: 4px; font-size: 9px; color: var(--water-deep); font-weight: 700; }
+.slot { background: var(--water-light); border-left: 3px solid var(--water-deep); border-radius: 4px; padding: 4px 6px; font-size: 11px; margin-bottom: 2px; cursor: pointer; transition: all 0.15s; position: relative; }
+.slot:hover { transform: translateX(2px); box-shadow: 0 2px 6px var(--shadow); }
+.slot.recurring { background: var(--green-light); border-left-color: var(--green); }
+.slot.attended { background: #f0e0d0; border-left-color: var(--coral); }
+.slot.auto-booked::after { content: '⟳'; position: absolute; top: 2px; right: 3px; font-size: 10px; color: var(--green); font-weight: 700; }
+.slot-name { font-weight: 600; font-size: 11px; color: var(--ink); line-height: 1.15; }
+.slot-parent { font-size: 9px; color: var(--ink-soft); margin-top: 1px; line-height: 1.15; }
+.slot-badge { position: absolute; top: 2px; right: 2px; font-size: 8px; padding: 1px 3px; background: var(--ink); color: var(--paper); border-radius: 3px; letter-spacing: 0.04em; }
+.calendar.publish-mode .cal-cell.empty { cursor: cell; }
+.calendar.publish-mode .cal-cell.empty:hover { background: rgba(168, 208, 230, 0.32); outline: 1px dashed var(--water-deep); outline-offset: -2px; }
+.section-grid { display: grid; grid-template-columns: 1fr 340px; gap: 28px; }
+@media (max-width: 880px) { .section-grid { grid-template-columns: 1fr; } }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px var(--shadow); }
+.card h3 { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; margin-bottom: 16px; letter-spacing: -0.01em; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
+.field input, .field select { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); font-family: inherit; font-size: 14px; color: var(--ink); transition: border-color 0.15s; }
+.field input:focus, .field select:focus { outline: none; border-color: var(--water-deep); box-shadow: 0 0 0 3px rgba(74, 141, 184, 0.15); }
+.checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-soft); cursor: pointer; padding: 10px 12px; background: var(--paper-warm); border-radius: 8px; margin-top: 4px; }
+.checkbox-row input { width: auto; cursor: pointer; }
+.help-note { font-size: 12px; color: var(--ink-mute); background: rgba(168, 208, 230, 0.18); border-left: 2px solid var(--water); padding: 10px 12px; border-radius: 0 6px 6px 0; margin-bottom: 14px; line-height: 1.5; }
+.slot-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; min-height: 100px; max-height: 480px; overflow-y: auto; padding-right: 4px; }
+.slot-pick { border: 1px solid var(--line); background: var(--paper); padding: 10px; border-radius: 8px; cursor: pointer; text-align: left; font-family: inherit; transition: all 0.15s; position: relative; }
+.slot-pick:hover { border-color: var(--water-deep); transform: translateY(-2px); box-shadow: 0 4px 10px var(--shadow); }
+.slot-pick.selected { background: var(--water-deep); color: var(--paper); border-color: var(--water-deep); }
+.slot-pick.taken { opacity: 0.45; cursor: not-allowed; background: var(--paper-warm); }
+.slot-pick.taken:hover { transform: none; box-shadow: none; border-color: var(--line); }
+.slot-pick.selected .slot-pick-day, .slot-pick.selected .slot-pick-time { color: var(--paper); }
+.slot-pick-day { font-size: 10px; color: var(--ink-mute); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+.slot-pick-time { font-family: 'Fraunces', serif; font-size: 16px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.slot-pick-taken-by { font-size: 10px; color: var(--ink-mute); margin-top: 3px; font-style: italic; }
+.booking-list { display: flex; flex-direction: column; gap: 10px; }
+.booking-item { padding: 14px 16px; background: var(--paper-warm); border-radius: 10px; border-left: 3px solid var(--water); display: flex; justify-content: space-between; align-items: center; font-size: 13px; gap: 10px; }
+.booking-item.recurring { border-left-color: var(--green); }
+.booking-item.pending { border-left-color: var(--amber); background: var(--amber-light); }
+.booking-item .when { font-weight: 600; }
+.booking-item .who { color: var(--ink-mute); font-size: 12px; margin-top: 2px; }
+.booking-item .tag { font-size: 10px; padding: 2px 7px; background: var(--ink); color: var(--paper); border-radius: 4px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; white-space: nowrap; }
+.booking-item .tag.recur { background: var(--green); }
+.booking-item .tag.pending { background: var(--amber); }
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(10, 42, 63, 0.4); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+.modal-bg.show { display: flex; animation: fadeIn 0.2s; }
+.modal { background: var(--paper); border-radius: 14px; padding: 28px; max-width: 480px; width: 100%; box-shadow: 0 20px 60px rgba(10, 42, 63, 0.2); max-height: 90vh; overflow-y: auto; }
+.modal h2 { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; margin-bottom: 8px; letter-spacing: -0.01em; }
+.modal-sub { color: var(--ink-mute); font-size: 14px; margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; flex-wrap: wrap; }
+.attendance-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); gap: 10px; }
+.attendance-row:last-child { border-bottom: none; }
+.att-btns { display: flex; gap: 6px; }
+.att-btn { padding: 6px 12px; border: 1px solid var(--line); background: var(--paper); border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; transition: all 0.15s; font-weight: 500; }
+.att-btn:hover { border-color: var(--ink-mute); }
+.att-btn.active-yes { background: var(--green); color: white; border-color: var(--green); }
+.att-btn.active-no { background: var(--coral); color: white; border-color: var(--coral); }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--ink); color: var(--paper); padding: 12px 22px; border-radius: 999px; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); transition: transform 0.3s ease; z-index: 300; max-width: 90vw; text-align: center; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.error { background: var(--coral); }
+.empty { text-align: center; padding: 30px 20px; color: var(--ink-mute); font-size: 13px; font-style: italic; font-family: 'Fraunces', serif; }
+.legend { display: flex; gap: 14px; margin-top: 12px; font-size: 11px; color: var(--ink-mute); flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+.banner { background: linear-gradient(135deg, rgba(168, 208, 230, 0.3), rgba(212, 232, 212, 0.3)); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 13px; color: var(--ink-soft); display: flex; align-items: center; gap: 10px; }
+.banner.amber { background: var(--amber-light); border-color: var(--amber); }
+.banner.error { background: #f8e0d8; border-color: var(--coral); color: var(--coral); }
+.banner-icon { width: 28px; height: 28px; background: var(--water-deep); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+.banner.amber .banner-icon { background: var(--amber); }
+.banner.error .banner-icon { background: var(--coral); }
+.req-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--amber-light); border-radius: 8px; margin-bottom: 8px; gap: 10px; flex-wrap: wrap; }
+.req-info { flex: 1; min-width: 180px; }
+.req-info strong { font-size: 14px; }
+.req-info small { color: var(--ink-mute); display: block; font-size: 12px; margin-top: 2px; }
+.req-actions { display: flex; gap: 6px; }
+.req-actions button { padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; font-family: inherit; font-weight: 600; border: 1px solid transparent; }
+.req-approve { background: var(--green); color: white; border-color: var(--green); }
+.req-reject { background: transparent; color: var(--coral); border-color: var(--coral); }
+.req-approve:hover { background: #4a7a4e; }
+.req-reject:hover { background: var(--coral); color: white; }
+.coach-tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+.coach-tab { padding: 10px 16px; border: none; background: transparent; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--ink-mute); font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; position: relative; }
+.coach-tab.active { color: var(--ink); border-bottom-color: var(--water-deep); }
+.coach-tab:hover { color: var(--ink); }
+.coach-tab .badge { display: inline-block; background: var(--coral); color: white; font-size: 10px; padding: 1px 6px; border-radius: 999px; margin-left: 4px; vertical-align: middle; font-weight: 700; }
+.coach-panel { display: none; }
+.coach-panel.active { display: block; animation: fadeIn 0.2s; }
+.login-card { max-width: 400px; margin: 60px auto; }
+.login-card h2 { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; margin-bottom: 20px; }
+.config-warning { max-width: 720px; margin: 60px auto; padding: 28px; background: var(--amber-light); border: 1px solid var(--amber); border-radius: 12px; }
+.config-warning h2 { font-family: 'Fraunces', serif; font-size: 24px; margin-bottom: 12px; }
+.config-warning code { background: var(--paper); padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: ui-monospace, monospace; }
+.config-warning pre { background: var(--paper); padding: 14px; border-radius: 8px; font-size: 12px; overflow-x: auto; margin: 10px 0; line-height: 1.5; }
+.loading { text-align: center; padding: 40px; color: var(--ink-mute); font-style: italic; }
+.tz-note { font-size: 11px; color: var(--ink-mute); padding: 0 4px; font-style: italic; }
+/* Admin 后台样式 */
+.admin-badge { background: linear-gradient(135deg, #6b3fa0, #9b6dd6); color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.admin-bar { background: linear-gradient(135deg, #2b1f3d, #4a2c6f); color: #e8d9f5; padding: 10px 28px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; gap: 12px; flex-wrap: wrap; }
+.admin-bar strong { color: white; font-family: 'Fraunces', serif; font-size: 15px; }
+.admin-bar button { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.admin-bar button:hover { background: rgba(255,255,255,0.25); }
+.admin-section { background: var(--paper); border: 1px solid #4a2c6f; border-radius: 12px; padding: 22px; margin-bottom: 18px; }
+.admin-section h3 { font-family: 'Fraunces', serif; font-size: 18px; margin-bottom: 12px; color: #4a2c6f; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: ui-monospace, 'SF Mono', monospace; }
+.admin-table th, .admin-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+.admin-table th { background: var(--paper-warm); font-weight: 600; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
+.admin-table tr:hover { background: rgba(168, 208, 230, 0.1); }
+.admin-table .row-actions button { padding: 3px 8px; font-size: 10px; margin-right: 4px; border-radius: 4px; cursor: pointer; border: 1px solid var(--line); background: var(--paper); font-family: inherit; }
+.admin-table .row-actions button:hover { border-color: var(--coral); color: var(--coral); }
+.admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.stat-card { background: linear-gradient(135deg, #f4f0fa, #ebe2f5); border: 1px solid #d4c4e8; border-radius: 10px; padding: 14px; }
+.stat-card .num { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; color: #4a2c6f; line-height: 1; }
+.stat-card .lbl { font-size: 11px; color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; font-weight: 600; }
+.admin-tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.admin-tab { padding: 8px 14px; border: none; background: transparent; cursor: pointer; font-family: inherit; font-size: 13px; color: var(--ink-mute); font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+.admin-tab.active { color: #4a2c6f; border-bottom-color: #4a2c6f; }
+.admin-tab:hover { color: #4a2c6f; }
+.admin-panel { display: none; }
+.admin-panel.active { display: block; animation: fadeIn 0.2s; }
+.json-blob { background: #1e1e2e; color: #cdd6f4; padding: 12px; border-radius: 8px; font-family: ui-monospace, monospace; font-size: 11px; line-height: 1.6; max-height: 400px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+.danger-zone { border: 1px dashed var(--coral); background: rgba(224, 120, 86, 0.05); border-radius: 8px; padding: 14px; margin-top: 18px; }
+.danger-zone h4 { color: var(--coral); font-size: 13px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+.danger-zone button { background: var(--coral); color: white; border: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; margin-right: 8px; }
+.real-time-pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 6px; animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-name">
+      <span>SwimSignup</span>
+      <small>泳课预约 · ET</small>
+    </div>
+  </div>
+  <div class="role-switch">
+    <span class="coach-status" id="coach-status"></span>
+    <button class="role-btn active" data-role="student">家长</button>
+    <button class="role-btn" data-role="coach">教练</button>
+    <button class="role-btn" data-role="admin" id="admin-role-btn" style="display:none;">⚡ Admin</button>
+  </div>
+</header>
+
+<!-- Admin 顶部条(仅admin登录可见) -->
+<div class="admin-bar" id="admin-bar" style="display:none;">
+  <div>
+    <span class="admin-badge">ADMIN</span>
+    <strong id="admin-name">Zoe Stella</strong>
+    <span style="opacity:0.7; margin-left:8px;"><span class="real-time-pulse"></span>Realtime 已连接</span>
+  </div>
+  <div>
+    <button onclick="window.open('https://supabase.com/dashboard', '_blank')">↗ Supabase Dashboard</button>
+    <button onclick="adminExitToCoach()">教练视角</button>
+  </div>
+</div>
+
+<main class="app">
+
+  <!-- 配置缺失警告 -->
+  <section class="view" id="view-config">
+    <div class="config-warning">
+      <h2>⚙️ 还没有配置 Supabase</h2>
+      <p>请按以下步骤完成配置:</p>
+      <ol style="margin: 14px 0 14px 20px; line-height: 1.9;">
+        <li>到 <a href="https://supabase.com" target="_blank">supabase.com</a> 注册并创建一个新项目</li>
+        <li>项目就绪后,到 <strong>Project Settings → API Keys</strong> 找到 <code>Project URL</code> 和 <code>publishable key</code> (或 legacy <code>anon key</code>)</li>
+        <li>打开本 HTML 文件,搜索 <code>SUPABASE_URL</code> 和 <code>SUPABASE_ANON_KEY</code>,把值替换进去</li>
+        <li>到 <strong>SQL Editor</strong> 执行下方建表语句,然后到 <strong>Authentication → Users</strong> 用邀请方式创建你的教练账号</li>
+      </ol>
+      <p><strong>建表 SQL(首次运行一次):</strong></p>
+      <pre id="sql-script"></pre>
+      <p style="font-size: 13px; color: var(--ink-soft);">完整部署指南请见随附的 <code>DEPLOY.md</code> 文件。</p>
+    </div>
+  </section>
+
+  <!-- 学员/家长视图 -->
+  <section class="view" id="view-student">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">为孩子<em>预约</em>这周的泳课</h1>
+        <p class="page-sub">每节30分钟 · 时间为美东时间(ET) · 提前12小时可自助取消</p>
+      </div>
+    </div>
+
+    <div class="banner" id="auto-banner" style="display:none;">
+      <div class="banner-icon">⟳</div>
+      <div id="auto-banner-text"></div>
+    </div>
+
+    <div class="banner amber" id="pending-banner" style="display:none;">
+      <div class="banner-icon">⏳</div>
+      <div id="pending-banner-text"></div>
+    </div>
+
+    <div class="section-grid">
+      <div>
+        <div class="card">
+          <h3>1. 选择时段 <span class="tz-note">(美东时间)</span></h3>
+          <div class="week-nav">
+            <button id="prev-week-s">‹</button>
+            <span class="week-label" id="week-label-s"></span>
+            <button id="next-week-s">›</button>
+          </div>
+          <div class="slot-picker" id="slot-picker"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>2. 报名信息</h3>
+          <div class="help-note">私教课为孩子预留 · 请填写孩子和家长信息</div>
+          <div class="field">
+            <label>孩子姓名</label>
+            <input type="text" id="s-child" placeholder="例如：王小明">
+          </div>
+          <div class="field">
+            <label>家长姓名</label>
+            <input type="text" id="s-parent" placeholder="例如：王妈妈">
+          </div>
+          <div class="field">
+            <label>家长邮箱</label>
+            <input type="email" id="s-email" placeholder="parent@example.com">
+          </div>
+          <div class="field">
+            <label>家长电话</label>
+            <input type="tel" id="s-phone" placeholder="919-555-0123">
+          </div>
+          <label class="checkbox-row">
+            <input type="checkbox" id="s-recur">
+            <span>申请每周固定时间(需教练审批)</span>
+          </label>
+          <button class="primary" style="width:100%; margin-top: 14px;" id="btn-book">完成预约</button>
+        </div>
+
+        <div class="card" style="margin-top: 16px;">
+          <h3>我家孩子的预约</h3>
+          <div class="booking-list" id="my-bookings">
+            <div class="empty">填写邮箱后会显示预约</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 教练登录视图 -->
+  <section class="view" id="view-coach-login">
+    <div class="card login-card">
+      <h2>教练登录</h2>
+      <div class="help-note">仅教练可访问后台 · 请使用 Supabase 中创建的账号登录</div>
+      <div class="field">
+        <label>邮箱</label>
+        <input type="email" id="login-email" placeholder="coach@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>密码</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="primary" id="btn-login" style="width:100%;">登录</button>
+      <p style="font-size: 12px; color: var(--ink-mute); margin-top: 14px; text-align: center;">
+        密码忘了请到 Supabase Dashboard → Authentication → Users 重置
+      </p>
+    </div>
+  </section>
+
+  <!-- 教练工作台 -->
+  <section class="view" id="view-coach">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">教练<em>工作台</em></h1>
+        <p class="page-sub">每节30分钟 · 美东时间 · 发布时段后已批准的循环自动占座</p>
+      </div>
+      <div class="action-bar">
+        <button class="ghost" id="btn-logout">登出</button>
+      </div>
+    </div>
+
+    <div class="coach-tabs">
+      <button class="coach-tab active" data-tab="schedule">课表</button>
+      <button class="coach-tab" data-tab="requests">循环申请<span class="badge" id="req-badge" style="display:none;">0</span></button>
+      <button class="coach-tab" data-tab="recurring">循环名单</button>
+    </div>
+
+    <div class="coach-panel active" id="panel-schedule">
+      <div class="action-bar" style="margin-bottom:16px; justify-content:flex-end;">
+        <button class="ghost" id="btn-export">导出本周</button>
+        <button class="accent" id="btn-publish-mode">📅 发布时段</button>
+      </div>
+      <div class="week-nav">
+        <button id="prev-week-c">‹</button>
+        <span class="week-label" id="week-label-c"></span>
+        <button id="next-week-c">›</button>
+        <span class="week-status" id="week-status">未发布</span>
+        <button class="ghost" style="margin-left: auto; padding: 8px 14px; font-size: 13px;" id="btn-today">今天</button>
+      </div>
+      <div class="banner" id="publish-banner" style="display:none;">
+        <div class="banner-icon">+</div>
+        <div><strong>发布模式</strong> · 点击空白格子开放该时段供家长预约,再次点击撤销。完成后点"结束发布"。</div>
+      </div>
+      <div class="banner" id="auto-coach-banner" style="display:none;">
+        <div class="banner-icon" style="background: var(--green);">⟳</div>
+        <div id="auto-coach-banner-text"></div>
+      </div>
+      <div class="calendar" id="calendar">
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <div class="legend" style="margin-top: 14px;">
+        <span class="legend-item"><span class="legend-dot" style="background: rgba(168,208,230,0.4);"></span>已开放</span>
+        <span class="legend-item"><span class="legend-dot" style="background: var(--water-light); border-left: 3px solid var(--water-deep);"></span>新预约</span>
+        <span class="legend-item"><span class="legend-dot" style="background: var(--green-light); border-left: 3px solid var(--green);"></span>循环 / 自动占座</span>
+        <span class="legend-item"><span class="legend-dot" style="background: #f0e0d0; border-left: 3px solid var(--coral);"></span>已签到</span>
+      </div>
+    </div>
+
+    <div class="coach-panel" id="panel-requests">
+      <div class="card">
+        <h3>循环预约申请</h3>
+        <div class="help-note">家长申请后需要你审批。批准后,该孩子今后在这个"周X+时间"上你发布的时段会被自动占座。</div>
+        <div id="req-list"></div>
+      </div>
+    </div>
+
+    <div class="coach-panel" id="panel-recurring">
+      <div class="card">
+        <h3>已批准的循环预约</h3>
+        <div class="booking-list" id="recurring-list">
+          <div class="empty">还没有批准的循环预约</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⚡ Admin 超级管理后台 -->
+  <section class="view" id="view-admin">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title"><em>系统管理</em>后台</h1>
+        <p class="page-sub">原始数据 · 强制操作 · 调试工具 · 仅 admin 可见</p>
+      </div>
+    </div>
+
+    <div class="admin-stats" id="admin-stats"></div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-atab="overview">概览</button>
+      <button class="admin-tab" data-atab="bookings">所有预约</button>
+      <button class="admin-tab" data-atab="recurring">所有循环</button>
+      <button class="admin-tab" data-atab="releases">发布时段</button>
+      <button class="admin-tab" data-atab="users">账号管理</button>
+      <button class="admin-tab" data-atab="raw">原始 JSON</button>
+      <button class="admin-tab" data-atab="danger">危险区</button>
+    </div>
+
+    <div class="admin-panel active" id="apanel-overview">
+      <div class="admin-section">
+        <h3>系统概览</h3>
+        <div id="admin-overview-content"></div>
+      </div>
+    </div>
+
+    <div class="admin-panel" id="apanel-bookings">
+      <div class="admin-section">
+        <h3>所有单次预约 (bookings)</h3>
+        <div style="overflow-x:auto;"><table class="admin-table" id="admin-bookings-table"></table></div>
+      </div>
+    </div>
+
+    <div class="admin-panel" id="apanel-recurring">
+      <div class="admin-section">
+        <h3>所有循环申请 (recurring_requests)</h3>
+        <div style="overflow-x:auto;"><table class="admin-table" id="admin-requests-table"></table></div>
+      </div>
+      <div class="admin-section">
+        <h3>所有已批准循环 (recurring_approved)</h3>
+        <div style="overflow-x:auto;"><table class="admin-table" id="admin-approved-table"></table></div>
+      </div>
+    </div>
+
+    <div class="admin-panel" id="apanel-releases">
+      <div class="admin-section">
+        <h3>发布的时段 (releases) · 按周分组</h3>
+        <div id="admin-releases-content"></div>
+      </div>
+    </div>
+
+    <div class="admin-panel" id="apanel-users">
+      <div class="admin-section">
+        <h3>Admin 名单</h3>
+        <p class="help-note">Admin 拥有最高权限。要新增 admin: 1) 在 Supabase Auth 创建账号 2) 在 SQL Editor 执行 <code>insert into app_admins(user_id, name) values ('用户UUID', '姓名');</code></p>
+        <div id="admin-users-list"></div>
+      </div>
+      <div class="admin-section">
+        <h3>所有 Auth 用户 (教练)</h3>
+        <p class="help-note">由于浏览器限制无法直接列出 auth.users,请到 <a href="https://supabase.com/dashboard" target="_blank">Supabase Dashboard → Authentication</a> 管理账号。</p>
+      </div>
+    </div>
+
+    <div class="admin-panel" id="apanel-raw">
+      <div class="admin-section">
+        <h3>原始数据 (JSON)</h3>
+        <p class="help-note">实时拉取所有表的内容。可以复制出来做备份。</p>
+        <button class="ghost" onclick="adminRefreshRaw()" style="margin-bottom:12px;">🔄 刷新</button>
+        <button class="ghost" onclick="adminDownloadBackup()" style="margin-bottom:12px;">💾 下载完整备份(JSON)</button>
+        <div class="json-blob" id="admin-raw-json">点上方按钮加载...</div>
+      </div>
+    </div>
+
+    <div class="admin-panel" id="apanel-danger">
+      <div class="admin-section">
+        <h3>⚠️ 危险操作</h3>
+        <p class="help-note">这些操作不可逆。仅在测试或确实需要清理时使用。</p>
+
+        <div class="danger-zone">
+          <h4>清空测试数据</h4>
+          <p style="font-size:13px; margin-bottom:10px;">删除所有预约/申请/发布,但保留 admin 账号和教练账号配置。</p>
+          <button onclick="adminWipeBookings()">清空所有预约</button>
+          <button onclick="adminWipeReleases()">清空所有发布时段</button>
+          <button onclick="adminWipeRecurring()">清空所有循环数据</button>
+          <button onclick="adminWipeAll()" style="background:#8b0000;">⚠ 全部清空</button>
+        </div>
+
+        <div class="danger-zone" style="margin-top:14px;">
+          <h4>导入数据</h4>
+          <p style="font-size:13px; margin-bottom:10px;">从备份 JSON 恢复数据(会覆盖现有同 id 行)。</p>
+          <input type="file" id="admin-import-file" accept="application/json" style="margin-bottom:10px;">
+          <br><button onclick="adminImportBackup()">从文件恢复</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="modal-bg" id="modal-detail">
+  <div class="modal">
+    <h2 id="md-title">课程详情</h2>
+    <p class="modal-sub" id="md-sub"></p>
+    <div id="md-body"></div>
+    <div class="modal-actions">
+      <button class="ghost" id="md-cancel-booking" style="color: var(--coral); border-color: var(--coral);">取消预约</button>
+      <button class="ghost" id="md-close">关闭</button>
+      <button class="primary" id="md-checkin">标记出勤</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+//  ⚙️ 配置区:把下面两行替换成你的 Supabase 项目值
+// ============================================================
+const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
+// ============================================================
+
+const TZ = 'America/New_York';
+const DAYS = ['一','二','三','四','五','六','日'];
+const SLOT_MINUTES = [];
+for (let h = 7; h <= 20; h++) { SLOT_MINUTES.push(h * 60); SLOT_MINUTES.push(h * 60 + 30); }
+
+// 建表脚本(显示在配置警告中)
+const SQL_SCRIPT = `-- ============================================
+-- 0) Admin 名单(超级管理员,如开发者本人)
+-- ============================================
+create table app_admins (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  name text not null,
+  added_at timestamptz default now()
+);
+
+-- 判断当前登录用户是否为 admin 的辅助函数
+create or replace function is_admin() returns boolean
+language sql security definer stable
+as $$
+  select exists (select 1 from app_admins where user_id = auth.uid());
+$$;
+
+-- 1) 释放表(教练发布的可预约时段)
+create table releases (
+  id uuid primary key default gen_random_uuid(),
+  date date not null,
+  minute int not null,
+  created_at timestamptz default now(),
+  unique(date, minute)
+);
+
+-- 2) 单次预约
+create table bookings (
+  id uuid primary key default gen_random_uuid(),
+  date date not null,
+  minute int not null,
+  child_name text not null,
+  parent_name text not null,
+  email text not null,
+  phone text not null,
+  cancelled boolean default false,
+  attendance text,
+  created_at timestamptz default now()
+);
+create index on bookings (email);
+create index on bookings (date, minute);
+
+-- 3) 循环预约申请
+create table recurring_requests (
+  id uuid primary key default gen_random_uuid(),
+  dow int not null,
+  minute int not null,
+  child_name text not null,
+  parent_name text not null,
+  email text not null,
+  phone text not null,
+  start_date date not null,
+  status text default 'pending',
+  created_at timestamptz default now()
+);
+
+-- 4) 已批准的循环预约
+create table recurring_approved (
+  id uuid primary key default gen_random_uuid(),
+  dow int not null,
+  minute int not null,
+  child_name text not null,
+  parent_name text not null,
+  email text not null,
+  phone text not null,
+  start_date date not null,
+  cancelled boolean default false,
+  cancelled_dates date[] default '{}',
+  attendance jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+create index on recurring_approved (email);
+create index on recurring_approved (dow, minute);
+
+-- ============================================
+-- 启用 RLS
+-- ============================================
+alter table app_admins enable row level security;
+alter table releases enable row level security;
+alter table bookings enable row level security;
+alter table recurring_requests enable row level security;
+alter table recurring_approved enable row level security;
+
+-- app_admins: 只 admin 自己能读自己,admin 能读所有
+create policy "admin can read admins" on app_admins for select using (is_admin() or user_id = auth.uid());
+create policy "admin can manage admins" on app_admins for all using (is_admin()) with check (is_admin());
+
+-- releases: 所有人读,教练写,admin全权
+create policy "anyone read releases" on releases for select using (true);
+create policy "coach write releases" on releases for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+-- bookings: 所有人读+插入,任何人改(包括家长取消),admin 全权
+create policy "anyone read bookings" on bookings for select using (true);
+create policy "anyone insert bookings" on bookings for insert with check (true);
+create policy "anyone update bookings" on bookings for update using (true) with check (true);
+create policy "coach delete bookings" on bookings for delete using (auth.role() = 'authenticated');
+
+-- recurring_requests: 所有人读+插入,教练改,admin全权
+create policy "anyone read requests" on recurring_requests for select using (true);
+create policy "anyone insert requests" on recurring_requests for insert with check (true);
+create policy "coach update requests" on recurring_requests for update using (auth.role() = 'authenticated');
+create policy "coach delete requests" on recurring_requests for delete using (auth.role() = 'authenticated');
+
+-- recurring_approved: 所有人读,教练插入,任何人改(家长取消单次),教练删
+create policy "anyone read approved" on recurring_approved for select using (true);
+create policy "coach insert approved" on recurring_approved for insert with check (auth.role() = 'authenticated');
+create policy "anyone update approved" on recurring_approved for update using (true) with check (true);
+create policy "coach delete approved" on recurring_approved for delete using (auth.role() = 'authenticated');
+
+-- ============================================
+-- 启用 Realtime(教练发布家长立刻看到)
+-- ============================================
+alter publication supabase_realtime add table releases;
+alter publication supabase_realtime add table bookings;
+alter publication supabase_realtime add table recurring_requests;
+alter publication supabase_realtime add table recurring_approved;`;
+
+document.getElementById('sql-script').textContent = SQL_SCRIPT;
+
+// ============================================================
+//  Supabase 初始化
+// ============================================================
+let sb = null;
+let coachUser = null;
+let isAdmin = false;
+let adminInfo = null;
+
+if (SUPABASE_URL.includes('YOUR_') || SUPABASE_ANON_KEY.includes('YOUR_')) {
+  document.getElementById('view-config').classList.add('active');
+} else {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  document.getElementById('view-student').classList.add('active');
+  init();
+}
+
+async function init() {
+  // 检查是否已登录
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    coachUser = session.user;
+    await checkAdminStatus();
+    updateCoachStatus();
+  }
+  // 监听登录/登出
+  sb.auth.onAuthStateChange(async (_event, session) => {
+    coachUser = session ? session.user : null;
+    if (coachUser) {
+      await checkAdminStatus();
+    } else {
+      isAdmin = false;
+      adminInfo = null;
+    }
+    updateCoachStatus();
+  });
+  await refreshAllData();
+  bindWeekNav();
+  setupRealtime();
+  renderAll();
+}
+
+async function checkAdminStatus() {
+  if (!coachUser) { isAdmin = false; adminInfo = null; return; }
+  const { data, error } = await sb.from('app_admins').select('*').eq('user_id', coachUser.id).maybeSingle();
+  if (error) { console.warn('admin check failed', error); isAdmin = false; return; }
+  if (data) {
+    isAdmin = true;
+    adminInfo = data;
+    document.getElementById('admin-role-btn').style.display = '';
+    document.getElementById('admin-name').textContent = data.name || coachUser.email;
+  } else {
+    isAdmin = false;
+    adminInfo = null;
+    document.getElementById('admin-role-btn').style.display = 'none';
+  }
+}
+
+function updateCoachStatus() {
+  const el = document.getElementById('coach-status');
+  if (coachUser) {
+    const adminMark = isAdmin ? '<span class="admin-badge" style="margin-right:6px;">ADMIN</span>' : '';
+    el.innerHTML = `${adminMark}<span class="signed-in">✓ ${coachUser.email}</span>`;
+  } else {
+    el.textContent = '';
+    document.getElementById('admin-role-btn').style.display = 'none';
+  }
+}
+
+// ============================================================
+//  Realtime 订阅:任何人改了数据库,所有打开页面的浏览器自动刷新
+// ============================================================
+let realtimeChannel = null;
+function setupRealtime() {
+  if (!sb || realtimeChannel) return;
+  realtimeChannel = sb
+    .channel('swim-signup-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'releases' }, onRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, onRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_requests' }, onRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_approved' }, onRealtimeChange)
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') console.log('[realtime] connected');
+    });
+}
+
+let realtimeDebounce = null;
+async function onRealtimeChange(payload) {
+  // 去抖:0.3秒内多个变更合并一次刷新
+  clearTimeout(realtimeDebounce);
+  realtimeDebounce = setTimeout(async () => {
+    await refreshAllData();
+    renderAll();
+    if (isAdmin && document.getElementById('view-admin').classList.contains('active')) {
+      renderAdminView();
+    }
+  }, 300);
+}
+
+// ============================================================
+//  本地缓存(从Supabase拉数据后存这里供渲染)
+// ============================================================
+let releases = [];           // [{date, minute}]
+let bookings = [];           // [{id, date, minute, child_name, ...}]
+let recurringRequests = [];  // [{id, dow, minute, ...status}]
+let recurringApproved = [];  // [{id, dow, minute, cancelled_dates[], attendance{}}]
+
+async function refreshAllData() {
+  if (!sb) return;
+  try {
+    const [r1, r2, r3, r4] = await Promise.all([
+      sb.from('releases').select('*'),
+      sb.from('bookings').select('*').eq('cancelled', false),
+      sb.from('recurring_requests').select('*'),
+      sb.from('recurring_approved').select('*').eq('cancelled', false)
+    ]);
+    if (r1.error) throw r1.error;
+    if (r2.error) throw r2.error;
+    if (r3.error) throw r3.error;
+    if (r4.error) throw r4.error;
+    releases = r1.data || [];
+    bookings = r2.data || [];
+    recurringRequests = r3.data || [];
+    recurringApproved = r4.data || [];
+  } catch (err) {
+    console.error('refresh error', err);
+    toast('数据加载失败: ' + err.message, true);
+  }
+}
+
+// ============================================================
+//  时间工具(锁定到美东时间)
+// ============================================================
+// 给定 Date 对象,返回美东时间的 {y, m, d, hh, mm, dow(周一=0)}
+function toET(date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    weekday: 'short', hour12: false
+  }).formatToParts(date);
+  const get = (t) => parts.find(p => p.type === t)?.value;
+  const y = parseInt(get('year'));
+  const m = parseInt(get('month'));
+  const d = parseInt(get('day'));
+  let hh = parseInt(get('hour'));
+  const mm = parseInt(get('minute'));
+  if (hh === 24) hh = 0;
+  const wkdMap = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+  const dow = wkdMap[get('weekday')];
+  return { y, m, d, hh, mm, dow };
+}
+
+// 当前美东时间的"今天日期" (不含时分)
+function todayET() {
+  const t = toET(new Date());
+  return { y: t.y, m: t.m, d: t.d };
+}
+
+function fmtDateET(et) {
+  return `${et.y}-${String(et.m).padStart(2,'0')}-${String(et.d).padStart(2,'0')}`;
+}
+function parseDateStr(str) {
+  // "2026-04-27" -> {y, m, d}(美东时间下的日期, 不会跨日)
+  const [y, m, d] = str.split('-').map(Number);
+  return { y, m, d };
+}
+// 给定美东日期+分钟数, 返回对应的UTC Date(用于真实时间比较)
+function etDateMinuteToInstant(etDate, minute) {
+  // 通过反复试探: 先做一个naive的UTC Date, 然后看其在ET下的偏移, 再纠正
+  // 简化版: 用 Intl 拿到目标时刻在ET的呈现, 二分修正
+  const target = `${etDate.y}-${String(etDate.m).padStart(2,'0')}-${String(etDate.d).padStart(2,'0')}T${String(Math.floor(minute/60)).padStart(2,'0')}:${String(minute%60).padStart(2,'0')}:00`;
+  // 用 Date.UTC 做初值, 然后查询其ET时间, 算偏差
+  let utcGuess = Date.UTC(etDate.y, etDate.m - 1, etDate.d, Math.floor(minute/60), minute % 60);
+  for (let i = 0; i < 3; i++) { // 3次足够纠正DST
+    const date = new Date(utcGuess);
+    const et = toET(date);
+    const actualMin = et.hh * 60 + et.mm;
+    const targetMin = minute;
+    const dayDiff = (et.y - etDate.y) * 365 + (et.m - etDate.m) * 31 + (et.d - etDate.d);
+    const diffMin = (dayDiff * 24 * 60) + (actualMin - targetMin);
+    if (diffMin === 0) break;
+    utcGuess -= diffMin * 60 * 1000;
+  }
+  return new Date(utcGuess);
+}
+function hoursUntilClass(dateStr, minute) {
+  const etDate = parseDateStr(dateStr);
+  const instant = etDateMinuteToInstant(etDate, minute);
+  return (instant.getTime() - Date.now()) / (1000 * 60 * 60);
+}
+function canCancelByParent(dateStr, minute) { return hoursUntilClass(dateStr, minute) >= 12; }
+
+// 给定一个 ET 日期, 计算它所在周的周一
+function startOfWeekET(etDate) {
+  // 用 instant 去算, 但保证返回的是ET日期
+  // 取该日中午12点对应的UTC instant(避开DST跨越导致的歧义)
+  const noonUtc = etDateMinuteToInstant(etDate, 12 * 60);
+  const et = toET(noonUtc); // 应该和etDate相同
+  // dow=0(Mon) ... 6(Sun). 周一为起点
+  // 减去 dow 天得到本周一
+  const monNoonUtc = new Date(noonUtc.getTime() - et.dow * 24 * 3600 * 1000);
+  const monEt = toET(monNoonUtc);
+  return { y: monEt.y, m: monEt.m, d: monEt.d };
+}
+
+function addDaysET(etDate, days) {
+  const noonUtc = etDateMinuteToInstant(etDate, 12 * 60);
+  const newUtc = new Date(noonUtc.getTime() + days * 24 * 3600 * 1000);
+  const et = toET(newUtc);
+  return { y: et.y, m: et.m, d: et.d };
+}
+
+function dowOfET(etDate) {
+  const noonUtc = etDateMinuteToInstant(etDate, 12 * 60);
+  return toET(noonUtc).dow;
+}
+
+function fmtRangeET(weekStart) {
+  const end = addDaysET(weekStart, 6);
+  return `${weekStart.y}年 ${weekStart.m}月${weekStart.d}日 — ${end.m}月${end.d}日 (ET)`;
+}
+function fmtMin(min) {
+  const h = Math.floor(min / 60); const m = min % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+
+let viewWeek = startOfWeekET(todayET());
+
+// ============================================================
+//  数据查询(基于本地缓存)
+// ============================================================
+function isSlotReleased(etDate, minute) {
+  const dateStr = fmtDateET(etDate);
+  return releases.some(r => r.date === dateStr && r.minute === minute);
+}
+
+function getBookingAt(etDate, minute) {
+  const dateStr = fmtDateET(etDate);
+  const direct = bookings.find(b => b.date === dateStr && b.minute === minute && !b.cancelled);
+  if (direct) return { ...direct, _kind: 'oneoff' };
+  if (!isSlotReleased(etDate, minute)) return null;
+  const dow = dowOfET(etDate);
+  const approved = recurringApproved.find(r => {
+    if (r.cancelled) return false;
+    if (r.dow !== dow || r.minute !== minute) return false;
+    if (r.start_date > dateStr) return false;
+    if (r.cancelled_dates && r.cancelled_dates.includes(dateStr)) return false;
+    return true;
+  });
+  if (approved) {
+    return {
+      _kind: 'recurring',
+      _autoBooked: true,
+      id: approved.id,
+      date: dateStr,
+      minute,
+      child_name: approved.child_name,
+      parent_name: approved.parent_name,
+      email: approved.email,
+      phone: approved.phone,
+      attendance: approved.attendance || {}
+    };
+  }
+  return null;
+}
+
+// ============================================================
+//  渲染:学员/家长视图
+// ============================================================
+function renderStudentView() {
+  document.getElementById('week-label-s').textContent = fmtRangeET(viewWeek);
+  const picker = document.getElementById('slot-picker');
+  picker.innerHTML = '';
+
+  // 收集本周所有发布的时段
+  const weekSlots = [];
+  for (let d = 0; d < 7; d++) {
+    const date = addDaysET(viewWeek, d);
+    for (const m of SLOT_MINUTES) {
+      if (isSlotReleased(date, m)) {
+        weekSlots.push({ date, minute: m });
+      }
+    }
+  }
+
+  if (weekSlots.length === 0) {
+    picker.innerHTML = '<div class="empty" style="grid-column:1/-1;">教练还未发布本周时段，请稍后再来 🌊</div>';
+  } else {
+    weekSlots.sort((a, b) => {
+      const da = fmtDateET(a.date), db = fmtDateET(b.date);
+      if (da !== db) return da < db ? -1 : 1;
+      return a.minute - b.minute;
+    });
+    for (const slot of weekSlots) {
+      const dateStr = fmtDateET(slot.date);
+      const sk = `${dateStr}_${slot.minute}`;
+      const dow = dowOfET(slot.date);
+      const booking = getBookingAt(slot.date, slot.minute);
+      const taken = booking !== null;
+      const btn = document.createElement('button');
+      btn.className = 'slot-pick' + (taken ? ' taken' : '') + (selectedSlot === sk ? ' selected' : '');
+      btn.disabled = taken;
+      btn.innerHTML = `
+        <div class="slot-pick-day">周${DAYS[dow]} · ${slot.date.m}/${slot.date.d}</div>
+        <div class="slot-pick-time">${fmtMin(slot.minute)}</div>
+        ${taken ? '<div class="slot-pick-taken-by">已被预约</div>' : ''}
+      `;
+      if (!taken) {
+        btn.addEventListener('click', () => { selectedSlot = sk; renderStudentView(); });
+      }
+      picker.appendChild(btn);
+    }
+  }
+
+  renderMyBookings();
+  renderAutoBanner();
+  renderPendingBanner();
+}
+
+function renderAutoBanner() {
+  const email = (document.getElementById('s-email').value.trim() || lastEmail).toLowerCase();
+  const banner = document.getElementById('auto-banner');
+  if (!email) { banner.style.display = 'none'; return; }
+  const auto = [];
+  for (let d = 0; d < 7; d++) {
+    const date = addDaysET(viewWeek, d);
+    for (const m of SLOT_MINUTES) {
+      if (!isSlotReleased(date, m)) continue;
+      const b = getBookingAt(date, m);
+      if (b && b.email && b.email.toLowerCase() === email && b._kind === 'recurring') {
+        auto.push(`周${DAYS[dowOfET(date)]} ${fmtMin(m)}`);
+      }
+    }
+  }
+  if (auto.length > 0) {
+    banner.style.display = 'flex';
+    document.getElementById('auto-banner-text').innerHTML = `<strong>循环预约已生效</strong> · 本周自动占座: ${auto.join(' / ')}`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function renderPendingBanner() {
+  const email = (document.getElementById('s-email').value.trim() || lastEmail).toLowerCase();
+  const banner = document.getElementById('pending-banner');
+  if (!email) { banner.style.display = 'none'; return; }
+  const pending = recurringRequests.filter(r => r.email.toLowerCase() === email && r.status === 'pending');
+  if (pending.length > 0) {
+    banner.style.display = 'flex';
+    document.getElementById('pending-banner-text').innerHTML = `<strong>循环申请审批中</strong> · 已提交 ${pending.length} 个申请,教练批准后会自动占座`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function renderMyBookings() {
+  const email = (document.getElementById('s-email').value.trim() || lastEmail).toLowerCase();
+  const list = document.getElementById('my-bookings');
+  if (!email) {
+    list.innerHTML = '<div class="empty">填写邮箱后会显示预约</div>';
+    return;
+  }
+  const approved = recurringApproved.filter(r => !r.cancelled && r.email.toLowerCase() === email);
+  const pending = recurringRequests.filter(r => r.status === 'pending' && r.email.toLowerCase() === email);
+  const oneoff = bookings.filter(b => !b.cancelled && b.email && b.email.toLowerCase() === email);
+
+  function nextOccurrenceThisWeek(r) {
+    for (let d = 0; d < 7; d++) {
+      const date = addDaysET(viewWeek, d);
+      if (dowOfET(date) === r.dow && isSlotReleased(date, r.minute)) {
+        const dateStr = fmtDateET(date);
+        if (r.cancelled_dates && r.cancelled_dates.includes(dateStr)) continue;
+        if (hoursUntilClass(dateStr, r.minute) > -1) return dateStr;
+      }
+    }
+    return null;
+  }
+
+  let html = '';
+  for (const r of approved) {
+    const nextDate = nextOccurrenceThisWeek(r);
+    const canCancel = nextDate && canCancelByParent(nextDate, r.minute);
+    const cancelBtn = nextDate
+      ? (canCancel
+          ? `<button class="ghost" style="padding:5px 10px;font-size:11px;" onclick="parentCancelRecurOnce('${r.id}','${nextDate}')">取消${nextDate.slice(5)}本次</button>`
+          : `<span style="font-size:10px;color:var(--ink-mute);font-style:italic;">距上课&lt;12h<br>请联系教练</span>`)
+      : '';
+    html += `<div class="booking-item recurring">
+      <div>
+        <div class="when">每周${DAYS[r.dow]} ${fmtMin(r.minute)}</div>
+        <div class="who">${r.child_name} · ${r.parent_name}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        <span class="tag recur">循环</span>
+        ${cancelBtn}
+      </div>
+    </div>`;
+  }
+  for (const r of pending) {
+    html += `<div class="booking-item pending">
+      <div>
+        <div class="when">每周${DAYS[r.dow]} ${fmtMin(r.minute)}</div>
+        <div class="who">${r.child_name} · ${r.parent_name}</div>
+      </div>
+      <span class="tag pending">待审批</span>
+    </div>`;
+  }
+  for (const b of oneoff) {
+    const canCancel = canCancelByParent(b.date, b.minute);
+    const cancelBtn = canCancel
+      ? `<button class="ghost" style="padding:5px 10px;font-size:11px;" onclick="parentCancelOneoff('${b.id}')">取消</button>`
+      : `<span style="font-size:10px;color:var(--ink-mute);font-style:italic;">距上课&lt;12h<br>请联系教练</span>`;
+    html += `<div class="booking-item">
+      <div>
+        <div class="when">${b.date} ${fmtMin(b.minute)}</div>
+        <div class="who">${b.child_name} · ${b.parent_name}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        <span class="tag">单次</span>
+        ${cancelBtn}
+      </div>
+    </div>`;
+  }
+  list.innerHTML = html || '<div class="empty">还没有预约记录</div>';
+}
+
+let lastEmail = localStorage.getItem('swimsignup_lastEmail') || '';
+let selectedSlot = null;
+
+window.parentCancelRecurOnce = async function(id, dateStr) {
+  const r = recurringApproved.find(x => x.id === id);
+  if (!r) return;
+  if (!canCancelByParent(dateStr, r.minute)) { toast('距上课不足12小时,无法自助取消', true); return; }
+  if (!confirm(`确认取消 ${dateStr} 这次课?(循环下周继续)`)) return;
+  const newDates = [...(r.cancelled_dates || []), dateStr];
+  const { error } = await sb.from('recurring_approved').update({ cancelled_dates: newDates }).eq('id', id);
+  if (error) { toast('取消失败: ' + error.message, true); return; }
+  await refreshAllData();
+  renderAll();
+  toast('本次已取消');
+};
+
+window.parentCancelOneoff = async function(id) {
+  const b = bookings.find(x => x.id === id);
+  if (!b) return;
+  if (!canCancelByParent(b.date, b.minute)) { toast('距上课不足12小时,无法自助取消', true); return; }
+  if (!confirm('确认取消这次预约?')) return;
+  const { error } = await sb.from('bookings').update({ cancelled: true }).eq('id', id);
+  if (error) { toast('取消失败: ' + error.message, true); return; }
+  await refreshAllData();
+  renderAll();
+  toast('已取消');
+};
+
+document.getElementById('btn-book').addEventListener('click', async () => {
+  const childName = document.getElementById('s-child').value.trim();
+  const parentName = document.getElementById('s-parent').value.trim();
+  const email = document.getElementById('s-email').value.trim();
+  const phone = document.getElementById('s-phone').value.trim();
+  const wantRecur = document.getElementById('s-recur').checked;
+  if (!selectedSlot) return toast('请先选择时段', true);
+  if (!childName) return toast('请填写孩子姓名', true);
+  if (!parentName) return toast('请填写家长姓名', true);
+  if (!email) return toast('请填写家长邮箱', true);
+  if (!phone) return toast('请填写家长电话', true);
+
+  const [dateStr, minStr] = selectedSlot.split('_');
+  const minute = parseInt(minStr);
+  const etDate = parseDateStr(dateStr);
+
+  // 重新查一遍冲突
+  await refreshAllData();
+  if (getBookingAt(etDate, minute)) {
+    toast('该时段刚刚被预约,请重选', true);
+    selectedSlot = null;
+    renderStudentView();
+    return;
+  }
+
+  const btn = document.getElementById('btn-book');
+  btn.disabled = true; btn.textContent = '提交中...';
+
+  const { error: bErr } = await sb.from('bookings').insert([{
+    date: dateStr, minute, child_name: childName, parent_name: parentName, email, phone
+  }]);
+  if (bErr) {
+    btn.disabled = false; btn.textContent = '完成预约';
+    toast('预约失败: ' + bErr.message, true);
+    return;
+  }
+
+  let recurMsg = '';
+  if (wantRecur) {
+    const dow = dowOfET(etDate);
+    const dup = recurringRequests.some(r => r.email.toLowerCase() === email.toLowerCase() && r.dow === dow && r.minute === minute && r.status === 'pending')
+      || recurringApproved.some(r => !r.cancelled && r.email.toLowerCase() === email.toLowerCase() && r.dow === dow && r.minute === minute);
+    if (!dup) {
+      const { error: rErr } = await sb.from('recurring_requests').insert([{
+        dow, minute, child_name: childName, parent_name: parentName, email, phone, start_date: dateStr
+      }]);
+      if (!rErr) recurMsg = ' · 循环申请已提交';
+      else recurMsg = ' · 循环申请失败:' + rErr.message;
+    } else {
+      recurMsg = ' · 已存在该时间循环申请,未重复提交';
+    }
+  }
+  lastEmail = email;
+  localStorage.setItem('swimsignup_lastEmail', email);
+  selectedSlot = null;
+  await refreshAllData();
+  renderStudentView();
+  btn.disabled = false; btn.textContent = '完成预约';
+  toast(`预约成功${recurMsg}`);
+});
+
+document.getElementById('s-email').addEventListener('input', () => { renderMyBookings(); renderAutoBanner(); renderPendingBanner(); });
+
+// ============================================================
+//  教练登录
+// ============================================================
+document.getElementById('btn-login').addEventListener('click', async () => {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!email || !password) return toast('请填邮箱和密码', true);
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true; btn.textContent = '登录中...';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = '登录';
+  if (error) { toast('登录失败: ' + error.message, true); return; }
+  coachUser = data.user;
+  updateCoachStatus();
+  document.querySelectorAll('.role-btn').forEach(x => x.classList.toggle('active', x.dataset.role === 'coach'));
+  showView('view-coach');
+  renderCoachView();
+  toast('欢迎回来,教练!');
+});
+
+document.getElementById('btn-logout').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  coachUser = null;
+  updateCoachStatus();
+  document.querySelectorAll('.role-btn').forEach(x => x.classList.toggle('active', x.dataset.role === 'student'));
+  showView('view-student');
+  toast('已登出');
+});
+
+// ============================================================
+//  教练视图
+// ============================================================
+let publishMode = false;
+
+function renderCoachView() {
+  if (!coachUser) return;
+  document.getElementById('week-label-c').textContent = fmtRangeET(viewWeek);
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  // 本周发布数量
+  let releasedCount = 0;
+  for (let d = 0; d < 7; d++) {
+    const date = addDaysET(viewWeek, d);
+    for (const m of SLOT_MINUTES) if (isSlotReleased(date, m)) releasedCount++;
+  }
+  const statusEl = document.getElementById('week-status');
+  if (releasedCount > 0) {
+    statusEl.textContent = `已发布 ${releasedCount} 个时段`;
+    statusEl.className = 'week-status published';
+  } else {
+    statusEl.textContent = '未发布';
+    statusEl.className = 'week-status draft';
+  }
+
+  // 表头
+  const corner = document.createElement('div');
+  corner.className = 'cal-head';
+  grid.appendChild(corner);
+  const today = todayET();
+  for (let d = 0; d < 7; d++) {
+    const date = addDaysET(viewWeek, d);
+    const isToday = date.y === today.y && date.m === today.m && date.d === today.d;
+    const head = document.createElement('div');
+    head.className = 'cal-head' + (isToday ? ' today' : '');
+    head.innerHTML = `周${DAYS[d]}<span class="day-num">${date.m}/${date.d}</span>`;
+    grid.appendChild(head);
+  }
+
+  for (const minute of SLOT_MINUTES) {
+    const isHalf = minute % 60 === 30;
+    const tcell = document.createElement('div');
+    tcell.className = 'cal-time' + (isHalf ? ' half' : '');
+    tcell.textContent = fmtMin(minute);
+    grid.appendChild(tcell);
+
+    for (let d = 0; d < 7; d++) {
+      const date = addDaysET(viewWeek, d);
+      const cell = document.createElement('div');
+      const booking = getBookingAt(date, minute);
+      const released = isSlotReleased(date, minute);
+      let cellClass = 'cal-cell';
+      if (isHalf) cellClass += ' half-row';
+      if (booking) {} else if (released) cellClass += ' released empty';
+      else cellClass += ' empty';
+      cell.className = cellClass;
+
+      if (booking) {
+        const dateStr = fmtDateET(date);
+        const att = booking.attendance?.[dateStr];
+        const slotEl = document.createElement('div');
+        let slotClass = 'slot';
+        if (booking._kind === 'recurring') slotClass += ' recurring';
+        if (booking._autoBooked) slotClass += ' auto-booked';
+        if (att === 'yes') slotClass += ' attended';
+        slotEl.className = slotClass;
+        slotEl.innerHTML = `
+          <div class="slot-name">${booking.child_name}</div>
+          <div class="slot-parent">${booking.parent_name}</div>
+          ${att === 'yes' ? '<span class="slot-badge">✓</span>' : ''}
+        `;
+        slotEl.addEventListener('click', (e) => { e.stopPropagation(); openBookingDetail(booking, date); });
+        cell.appendChild(slotEl);
+      } else if (publishMode) {
+        cell.addEventListener('click', () => togglePublish(date, minute));
+      }
+      grid.appendChild(cell);
+    }
+  }
+  renderRequestsTab();
+  renderRecurringList();
+  renderAutoCoachBanner();
+}
+
+function renderAutoCoachBanner() {
+  let count = 0; const kids = new Set();
+  for (let d = 0; d < 7; d++) {
+    const date = addDaysET(viewWeek, d);
+    for (const m of SLOT_MINUTES) {
+      if (!isSlotReleased(date, m)) continue;
+      const b = getBookingAt(date, m);
+      if (b && b._autoBooked) { count++; kids.add(b.child_name); }
+    }
+  }
+  const banner = document.getElementById('auto-coach-banner');
+  if (count > 0) {
+    banner.style.display = 'flex';
+    document.getElementById('auto-coach-banner-text').innerHTML = `<strong>自动占座 ${count} 节</strong> · ${[...kids].join(' / ')} 的循环预约已生效`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function renderRequestsTab() {
+  const list = document.getElementById('req-list');
+  const pending = recurringRequests.filter(r => r.status === 'pending');
+  const badge = document.getElementById('req-badge');
+  if (pending.length > 0) { badge.style.display = 'inline-block'; badge.textContent = pending.length; }
+  else badge.style.display = 'none';
+  if (pending.length === 0) {
+    list.innerHTML = '<div class="empty">暂无待审批的循环申请</div>';
+    return;
+  }
+  list.innerHTML = pending.map(r => `
+    <div class="req-row">
+      <div class="req-info">
+        <strong>${r.child_name}</strong> · 每周${DAYS[r.dow]} ${fmtMin(r.minute)}
+        <small>家长 ${r.parent_name} · ${r.phone} · ${r.email}</small>
+        <small>从 ${r.start_date} 起</small>
+      </div>
+      <div class="req-actions">
+        <button class="req-approve" onclick="approveRecur('${r.id}')">✓ 批准</button>
+        <button class="req-reject" onclick="rejectRecur('${r.id}')">拒绝</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.approveRecur = async function(id) {
+  const r = recurringRequests.find(x => x.id === id);
+  if (!r) return;
+  // 1) 标记申请为approved 2) 加入recurring_approved
+  const { error: e1 } = await sb.from('recurring_requests').update({ status: 'approved' }).eq('id', id);
+  if (e1) { toast('批准失败: ' + e1.message, true); return; }
+  const { error: e2 } = await sb.from('recurring_approved').insert([{
+    dow: r.dow, minute: r.minute, child_name: r.child_name, parent_name: r.parent_name,
+    email: r.email, phone: r.phone, start_date: r.start_date
+  }]);
+  if (e2) { toast('保存失败: ' + e2.message, true); return; }
+  await refreshAllData();
+  renderCoachView();
+  toast(`已批准 ${r.child_name} 的循环预约`);
+};
+
+window.rejectRecur = async function(id) {
+  const r = recurringRequests.find(x => x.id === id);
+  if (!r) return;
+  if (!confirm(`拒绝 ${r.child_name} 的循环申请?(本次单次预约不受影响)`)) return;
+  const { error } = await sb.from('recurring_requests').update({ status: 'rejected' }).eq('id', id);
+  if (error) { toast('失败: ' + error.message, true); return; }
+  await refreshAllData();
+  renderCoachView();
+  toast('已拒绝');
+};
+
+function renderRecurringList() {
+  const list = document.getElementById('recurring-list');
+  const approved = recurringApproved.filter(r => !r.cancelled);
+  if (approved.length === 0) {
+    list.innerHTML = '<div class="empty">还没有批准的循环预约</div>';
+    return;
+  }
+  list.innerHTML = approved.map(r => `
+    <div class="booking-item recurring">
+      <div>
+        <div class="when">${r.child_name} · 每周${DAYS[r.dow]} ${fmtMin(r.minute)}</div>
+        <div class="who">${r.parent_name} · ${r.phone} · 自 ${r.start_date}</div>
+      </div>
+      <button class="ghost" style="padding:6px 12px; font-size:12px;" onclick="cancelRecurringApproved('${r.id}')">结束循环</button>
+    </div>
+  `).join('');
+}
+
+window.cancelRecurringApproved = async function(id) {
+  if (!confirm('确认结束这个循环预约?(历史已签到记录会保留)')) return;
+  const { error } = await sb.from('recurring_approved').update({ cancelled: true }).eq('id', id);
+  if (error) { toast('失败: ' + error.message, true); return; }
+  await refreshAllData();
+  renderCoachView();
+  toast('已结束循环');
+};
+
+async function togglePublish(etDate, minute) {
+  const dateStr = fmtDateET(etDate);
+  const existing = releases.find(r => r.date === dateStr && r.minute === minute);
+  if (existing) {
+    if (getBookingAt(etDate, minute)) { toast('该时段已有人预约,无法撤销', true); return; }
+    const { error } = await sb.from('releases').delete().eq('id', existing.id);
+    if (error) { toast('撤销失败: ' + error.message, true); return; }
+  } else {
+    const { error } = await sb.from('releases').insert([{ date: dateStr, minute }]);
+    if (error) { toast('发布失败: ' + error.message, true); return; }
+    // 自动占座提示
+    const dow = dowOfET(etDate);
+    const matched = recurringApproved.find(r => !r.cancelled && r.dow === dow && r.minute === minute && r.start_date <= dateStr);
+    if (matched) toast(`已发布 · 自动为 ${matched.child_name} 占座 ⟳`);
+  }
+  await refreshAllData();
+  renderCoachView();
+}
+
+document.getElementById('btn-publish-mode').addEventListener('click', () => {
+  publishMode = !publishMode;
+  const cal = document.getElementById('calendar');
+  const btn = document.getElementById('btn-publish-mode');
+  const banner = document.getElementById('publish-banner');
+  if (publishMode) {
+    cal.classList.add('publish-mode');
+    btn.textContent = '✓ 结束发布';
+    btn.classList.remove('accent'); btn.classList.add('primary');
+    banner.style.display = 'flex';
+  } else {
+    cal.classList.remove('publish-mode');
+    btn.textContent = '📅 发布时段';
+    btn.classList.add('accent'); btn.classList.remove('primary');
+    banner.style.display = 'none';
+  }
+  renderCoachView();
+});
+
+let activeBooking = null;
+let activeBookingDate = null;
+
+function openBookingDetail(booking, etDate) {
+  activeBooking = booking;
+  activeBookingDate = fmtDateET(etDate);
+  document.getElementById('md-title').textContent = booking.child_name;
+  document.getElementById('md-sub').textContent =
+    `${activeBookingDate} · 周${DAYS[dowOfET(etDate)]} ${fmtMin(booking.minute)} ${booking._kind === 'recurring' ? '· 循环(自动占座)' : '· 单次'}`;
+  const att = booking.attendance?.[activeBookingDate];
+  document.getElementById('md-body').innerHTML = `
+    <div class="attendance-row">
+      <div>
+        <div style="font-weight:600;">${booking.child_name}</div>
+        <div style="color:var(--ink-mute); font-size:12px; margin-top: 3px;">家长: ${booking.parent_name}</div>
+        <div style="color:var(--ink-mute); font-size:12px;">${booking.email} · ${booking.phone}</div>
+      </div>
+      <div class="att-btns">
+        <button class="att-btn ${att === 'yes' ? 'active-yes' : ''}" data-att="yes">出勤</button>
+        <button class="att-btn ${att === 'no' ? 'active-no' : ''}" data-att="no">缺席</button>
+      </div>
+    </div>
+  `;
+  document.querySelectorAll('#md-body .att-btn').forEach(btn => {
+    btn.addEventListener('click', () => setAttendance(btn.dataset.att, etDate));
+  });
+  document.getElementById('modal-detail').classList.add('show');
+}
+
+async function setAttendance(value, etDate) {
+  const b = activeBooking;
+  const dateStr = activeBookingDate;
+  if (b._kind === 'recurring') {
+    // 更新 recurring_approved.attendance JSON
+    const r = recurringApproved.find(x => x.id === b.id);
+    if (!r) return;
+    const newAtt = { ...(r.attendance || {}), [dateStr]: value };
+    const { error } = await sb.from('recurring_approved').update({ attendance: newAtt }).eq('id', b.id);
+    if (error) { toast('保存失败: ' + error.message, true); return; }
+  } else {
+    const { error } = await sb.from('bookings').update({ attendance: value }).eq('id', b.id);
+    if (error) { toast('保存失败: ' + error.message, true); return; }
+  }
+  await refreshAllData();
+  // 重新打开modal
+  const fresh = getBookingAt(etDate, b.minute);
+  if (fresh) openBookingDetail(fresh, etDate);
+  renderCoachView();
+  toast(value === 'yes' ? '已记录出勤' : '已记录缺席');
+}
+
+document.getElementById('md-close').addEventListener('click', () => closeModal('modal-detail'));
+document.getElementById('md-checkin').addEventListener('click', async () => {
+  // 复用上面的 setAttendance
+  const etDate = parseDateStr(activeBookingDate);
+  await setAttendance('yes', etDate);
+  closeModal('modal-detail');
+});
+document.getElementById('md-cancel-booking').addEventListener('click', async () => {
+  const b = activeBooking;
+  if (b._kind === 'recurring') {
+    if (!confirm(`仅取消本次(${activeBookingDate})?\n如要结束整个循环请到"循环名单"标签页。`)) return;
+    const r = recurringApproved.find(x => x.id === b.id);
+    const newDates = [...(r.cancelled_dates || []), activeBookingDate];
+    const { error } = await sb.from('recurring_approved').update({ cancelled_dates: newDates }).eq('id', b.id);
+    if (error) { toast('失败: ' + error.message, true); return; }
+    await refreshAllData();
+    closeModal('modal-detail');
+    renderCoachView();
+    toast('本次已取消,循环继续');
+  } else {
+    if (!confirm('确认取消这个预约?')) return;
+    const { error } = await sb.from('bookings').update({ cancelled: true }).eq('id', b.id);
+    if (error) { toast('失败: ' + error.message, true); return; }
+    await refreshAllData();
+    closeModal('modal-detail');
+    renderCoachView();
+    toast('已取消');
+  }
+});
+
+// 周导航
+function bindWeekNav() {
+  ['prev-week-s', 'prev-week-c'].forEach(id => {
+    document.getElementById(id).addEventListener('click', () => { viewWeek = addDaysET(viewWeek, -7); renderAll(); });
+  });
+  ['next-week-s', 'next-week-c'].forEach(id => {
+    document.getElementById(id).addEventListener('click', () => { viewWeek = addDaysET(viewWeek, 7); renderAll(); });
+  });
+  document.getElementById('btn-today').addEventListener('click', () => { viewWeek = startOfWeekET(todayET()); renderAll(); });
+}
+
+// 角色切换
+document.querySelectorAll('.role-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    const role = b.dataset.role;
+    document.querySelectorAll('.role-btn').forEach(x => x.classList.toggle('active', x === b));
+    document.getElementById('admin-bar').style.display = (role === 'admin' && isAdmin) ? 'flex' : 'none';
+    if (role === 'student') {
+      if (publishMode) {
+        publishMode = false;
+        document.getElementById('calendar')?.classList.remove('publish-mode');
+        const pbtn = document.getElementById('btn-publish-mode');
+        pbtn.textContent = '📅 发布时段';
+        pbtn.classList.add('accent'); pbtn.classList.remove('primary');
+        document.getElementById('publish-banner').style.display = 'none';
+      }
+      showView('view-student');
+    } else if (role === 'coach') {
+      if (coachUser) { showView('view-coach'); renderCoachView(); }
+      else showView('view-coach-login');
+    } else if (role === 'admin') {
+      if (!isAdmin) { toast('你不是 admin', true); return; }
+      showView('view-admin');
+      renderAdminView();
+    }
+  });
+});
+
+window.adminExitToCoach = function() {
+  document.querySelectorAll('.role-btn').forEach(x => x.classList.toggle('active', x.dataset.role === 'coach'));
+  document.getElementById('admin-bar').style.display = 'none';
+  showView('view-coach');
+  renderCoachView();
+};
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// 教练tabs
+document.querySelectorAll('.coach-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.coach-tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('.coach-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('btn-export').addEventListener('click', () => {
+  const rows = [['日期(ET)','时间','孩子','家长','电话','类型','出勤']];
+  for (let d = 0; d < 7; d++) {
+    const date = addDaysET(viewWeek, d);
+    for (const m of SLOT_MINUTES) {
+      const b = getBookingAt(date, m);
+      if (b) {
+        const type = b._kind === 'recurring' ? '循环(自动)' : '单次';
+        const dateStr = fmtDateET(date);
+        const att = (b.attendance && typeof b.attendance === 'object' ? b.attendance[dateStr] : b.attendance) || '-';
+        rows.push([dateStr, fmtMin(m), b.child_name, b.parent_name, b.phone, type, att]);
+      }
+    }
+  }
+  if (rows.length === 1) { toast('本周还没有课程', true); return; }
+  const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `课表_${fmtDateET(viewWeek)}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast('已导出 CSV');
+});
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.modal-bg').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+});
+
+function toast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function renderAll() {
+  renderStudentView();
+  if (coachUser) renderCoachView();
+  if (isAdmin && document.getElementById('view-admin').classList.contains('active')) renderAdminView();
+}
+
+// ============================================================
+//  ⚡ Admin 后台逻辑
+// ============================================================
+function renderAdminView() {
+  if (!isAdmin) return;
+  renderAdminStats();
+  renderAdminOverview();
+  renderAdminBookings();
+  renderAdminRequests();
+  renderAdminApproved();
+  renderAdminReleases();
+  renderAdminUsers();
+}
+
+function renderAdminStats() {
+  const today = todayET();
+  const todayStr = fmtDateET(today);
+  const upcomingBookings = bookings.filter(b => !b.cancelled && b.date >= todayStr).length;
+  const pendingReqs = recurringRequests.filter(r => r.status === 'pending').length;
+  const activeRecur = recurringApproved.filter(r => !r.cancelled).length;
+  const futureReleases = releases.filter(r => r.date >= todayStr).length;
+  document.getElementById('admin-stats').innerHTML = `
+    <div class="stat-card"><div class="num">${upcomingBookings}</div><div class="lbl">未来预约</div></div>
+    <div class="stat-card"><div class="num">${pendingReqs}</div><div class="lbl">待审批申请</div></div>
+    <div class="stat-card"><div class="num">${activeRecur}</div><div class="lbl">活跃循环</div></div>
+    <div class="stat-card"><div class="num">${futureReleases}</div><div class="lbl">未来开放时段</div></div>
+    <div class="stat-card"><div class="num">${bookings.length}</div><div class="lbl">总预约记录</div></div>
+  `;
+}
+
+function renderAdminOverview() {
+  // 唯一家长邮箱列表
+  const allEmails = new Set();
+  bookings.forEach(b => allEmails.add(b.email));
+  recurringApproved.forEach(r => allEmails.add(r.email));
+  // 孩子列表
+  const kids = new Map(); // email -> Set of child names
+  bookings.forEach(b => { if (!kids.has(b.email)) kids.set(b.email, new Set()); kids.get(b.email).add(b.child_name); });
+  recurringApproved.forEach(r => { if (!kids.has(r.email)) kids.set(r.email, new Set()); kids.get(r.email).add(r.child_name); });
+
+  let html = `<div style="font-size:13px; line-height:1.8;">
+    <div><strong>当前用户(${coachUser?.email || '未登录'}):</strong> ${isAdmin ? '<span class="admin-badge">ADMIN</span> ' : ''}${adminInfo?.name || ''}</div>
+    <div><strong>Supabase URL:</strong> <code>${SUPABASE_URL}</code></div>
+    <div><strong>美东时间:</strong> ${fmtDateET(today = todayET())} ${fmtMin((new Date()).getHours()*60 + (new Date()).getMinutes())} (浏览器本地)</div>
+    <div><strong>独立家长邮箱数:</strong> ${allEmails.size}</div>
+    <div><strong>登记孩子总数:</strong> ${[...kids.values()].reduce((s, set) => s + set.size, 0)}</div>
+    <div style="margin-top:14px;"><strong>家长 → 孩子 映射:</strong></div>
+    <table class="admin-table" style="margin-top:6px;">
+      <thead><tr><th>邮箱</th><th>孩子</th></tr></thead>
+      <tbody>${[...kids.entries()].map(([email, set]) => `<tr><td>${email}</td><td>${[...set].join(', ')}</td></tr>`).join('') || '<tr><td colspan=2 class="empty">还没有数据</td></tr>'}</tbody>
+    </table>
+  </div>`;
+  document.getElementById('admin-overview-content').innerHTML = html;
+}
+
+function renderAdminBookings() {
+  const t = document.getElementById('admin-bookings-table');
+  const sorted = [...bookings].sort((a, b) => (b.date + b.minute) > (a.date + a.minute) ? 1 : -1);
+  t.innerHTML = `
+    <thead><tr><th>日期</th><th>时间</th><th>孩子</th><th>家长</th><th>邮箱</th><th>电话</th><th>状态</th><th>出勤</th><th>操作</th></tr></thead>
+    <tbody>${sorted.map(b => `
+      <tr>
+        <td>${b.date}</td><td>${fmtMin(b.minute)}</td>
+        <td>${b.child_name}</td><td>${b.parent_name}</td>
+        <td>${b.email}</td><td>${b.phone}</td>
+        <td>${b.cancelled ? '<span style="color:var(--coral);">取消</span>' : '<span style="color:var(--green);">有效</span>'}</td>
+        <td>${b.attendance || '-'}</td>
+        <td class="row-actions">
+          ${b.cancelled ? `<button onclick="adminToggleCancelBooking('${b.id}', false)">恢复</button>` : `<button onclick="adminToggleCancelBooking('${b.id}', true)">取消</button>`}
+          <button onclick="adminDeleteRow('bookings', '${b.id}')">删除</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan=9 class="empty">还没有预约</td></tr>'}</tbody>
+  `;
+}
+
+function renderAdminRequests() {
+  const t = document.getElementById('admin-requests-table');
+  t.innerHTML = `
+    <thead><tr><th>状态</th><th>周</th><th>时间</th><th>孩子</th><th>家长</th><th>邮箱</th><th>从</th><th>操作</th></tr></thead>
+    <tbody>${recurringRequests.map(r => `
+      <tr>
+        <td>${r.status}</td>
+        <td>周${DAYS[r.dow]}</td><td>${fmtMin(r.minute)}</td>
+        <td>${r.child_name}</td><td>${r.parent_name}</td>
+        <td>${r.email}</td><td>${r.start_date}</td>
+        <td class="row-actions">
+          ${r.status === 'pending' ? `<button onclick="approveRecur('${r.id}')">批准</button><button onclick="rejectRecur('${r.id}')">拒绝</button>` : ''}
+          <button onclick="adminDeleteRow('recurring_requests', '${r.id}')">删除</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan=8 class="empty">还没有申请</td></tr>'}</tbody>
+  `;
+}
+
+function renderAdminApproved() {
+  const t = document.getElementById('admin-approved-table');
+  t.innerHTML = `
+    <thead><tr><th>状态</th><th>周</th><th>时间</th><th>孩子</th><th>家长</th><th>邮箱</th><th>取消日期</th><th>操作</th></tr></thead>
+    <tbody>${recurringApproved.map(r => `
+      <tr>
+        <td>${r.cancelled ? '<span style="color:var(--coral);">已结束</span>' : '<span style="color:var(--green);">活跃</span>'}</td>
+        <td>周${DAYS[r.dow]}</td><td>${fmtMin(r.minute)}</td>
+        <td>${r.child_name}</td><td>${r.parent_name}</td>
+        <td>${r.email}</td>
+        <td>${(r.cancelled_dates || []).join(', ') || '-'}</td>
+        <td class="row-actions">
+          ${r.cancelled ? `<button onclick="adminToggleCancelRecur('${r.id}', false)">恢复</button>` : `<button onclick="adminToggleCancelRecur('${r.id}', true)">结束</button>`}
+          <button onclick="adminDeleteRow('recurring_approved', '${r.id}')">删除</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan=8 class="empty">还没有循环</td></tr>'}</tbody>
+  `;
+}
+
+function renderAdminReleases() {
+  // 按周分组
+  const byWeek = new Map();
+  for (const r of releases) {
+    const ws = startOfWeekET(parseDateStr(r.date));
+    const wsKey = fmtDateET(ws);
+    if (!byWeek.has(wsKey)) byWeek.set(wsKey, []);
+    byWeek.get(wsKey).push(r);
+  }
+  const sortedWeeks = [...byWeek.keys()].sort();
+  let html = '';
+  for (const wk of sortedWeeks) {
+    const slots = byWeek.get(wk).sort((a, b) => (a.date + ('00000' + a.minute).slice(-5)).localeCompare(b.date + ('00000' + b.minute).slice(-5)));
+    html += `<div style="margin-bottom:14px;"><strong>${fmtRangeET(parseDateStr(wk))}</strong> · ${slots.length} 个时段
+      <table class="admin-table" style="margin-top:6px;">
+        <thead><tr><th>日期</th><th>时间</th><th>占座</th><th>操作</th></tr></thead>
+        <tbody>${slots.map(s => {
+          const etDate = parseDateStr(s.date);
+          const b = getBookingAt(etDate, s.minute);
+          return `<tr>
+            <td>${s.date}</td><td>${fmtMin(s.minute)}</td>
+            <td>${b ? `${b.child_name} (${b._kind === 'recurring' ? '循环' : '单次'})` : '<span style="color:var(--ink-mute);">空</span>'}</td>
+            <td class="row-actions"><button onclick="adminDeleteRow('releases', '${s.id}')">撤销发布</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>`;
+  }
+  document.getElementById('admin-releases-content').innerHTML = html || '<div class="empty">还没有发布的时段</div>';
+}
+
+async function renderAdminUsers() {
+  const { data, error } = await sb.from('app_admins').select('*');
+  const list = document.getElementById('admin-users-list');
+  if (error) { list.innerHTML = `<div class="empty">加载失败: ${error.message}</div>`; return; }
+  list.innerHTML = `<table class="admin-table">
+    <thead><tr><th>姓名</th><th>User ID</th><th>添加时间</th></tr></thead>
+    <tbody>${(data || []).map(a => `
+      <tr><td><strong>${a.name}</strong></td><td><code style="font-size:10px;">${a.user_id}</code></td><td>${a.added_at?.slice(0,10) || '-'}</td></tr>
+    `).join('')}</tbody>
+  </table>`;
+}
+
+// Admin 操作
+window.adminToggleCancelBooking = async function(id, cancelled) {
+  if (!isAdmin) return;
+  const { error } = await sb.from('bookings').update({ cancelled }).eq('id', id);
+  if (error) { toast('失败: ' + error.message, true); return; }
+  // Realtime会自动刷新
+  toast(cancelled ? '已强制取消' : '已恢复');
+};
+
+window.adminToggleCancelRecur = async function(id, cancelled) {
+  if (!isAdmin) return;
+  const { error } = await sb.from('recurring_approved').update({ cancelled }).eq('id', id);
+  if (error) { toast('失败: ' + error.message, true); return; }
+  toast(cancelled ? '已结束循环' : '已恢复循环');
+};
+
+window.adminDeleteRow = async function(table, id) {
+  if (!isAdmin) return;
+  if (!confirm(`真的要从 ${table} 表删除这条记录吗?\n这是物理删除,无法撤销。`)) return;
+  const { error } = await sb.from(table).delete().eq('id', id);
+  if (error) { toast('删除失败: ' + error.message, true); return; }
+  toast('已删除');
+};
+
+window.adminRefreshRaw = async function() {
+  await refreshAllData();
+  const dump = {
+    timestamp: new Date().toISOString(),
+    timezone: TZ,
+    counts: {
+      releases: releases.length,
+      bookings: bookings.length,
+      recurring_requests: recurringRequests.length,
+      recurring_approved: recurringApproved.length
+    },
+    releases, bookings,
+    recurring_requests: recurringRequests,
+    recurring_approved: recurringApproved
+  };
+  document.getElementById('admin-raw-json').textContent = JSON.stringify(dump, null, 2);
+};
+
+window.adminDownloadBackup = async function() {
+  await refreshAllData();
+  const dump = {
+    timestamp: new Date().toISOString(),
+    schema_version: 'v4',
+    releases, bookings,
+    recurring_requests: recurringRequests,
+    recurring_approved: recurringApproved
+  };
+  const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `swim-signup-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('备份已下载');
+};
+
+window.adminWipeBookings = async function() {
+  if (!isAdmin) return;
+  if (!confirm('删除所有 bookings 表数据? 不可恢复!')) return;
+  if (!confirm('真的确定? 第二次确认。')) return;
+  const { error } = await sb.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) { toast('失败: ' + error.message, true); return; }
+  toast('bookings 已清空');
+};
+window.adminWipeReleases = async function() {
+  if (!isAdmin) return;
+  if (!confirm('删除所有 releases? 不可恢复!')) return;
+  const { error } = await sb.from('releases').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) { toast('失败: ' + error.message, true); return; }
+  toast('releases 已清空');
+};
+window.adminWipeRecurring = async function() {
+  if (!isAdmin) return;
+  if (!confirm('删除所有循环申请和已批准循环? 不可恢复!')) return;
+  await sb.from('recurring_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await sb.from('recurring_approved').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  toast('循环数据已清空');
+};
+window.adminWipeAll = async function() {
+  if (!isAdmin) return;
+  if (!confirm('⚠️ 删除所有业务数据(bookings/releases/循环) ?')) return;
+  if (!confirm('再次确认: 真的全部清空?')) return;
+  const word = prompt('输入 WIPE 确认:');
+  if (word !== 'WIPE') { toast('已取消', true); return; }
+  await sb.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await sb.from('releases').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await sb.from('recurring_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await sb.from('recurring_approved').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  toast('已全部清空');
+};
+
+window.adminImportBackup = async function() {
+  if (!isAdmin) return;
+  const file = document.getElementById('admin-import-file').files[0];
+  if (!file) { toast('请先选择文件', true); return; }
+  if (!confirm('从备份文件导入数据? 同 id 的记录会被覆盖。')) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    let count = 0;
+    if (Array.isArray(data.releases)) {
+      const { error } = await sb.from('releases').upsert(data.releases);
+      if (error) throw error;
+      count += data.releases.length;
+    }
+    if (Array.isArray(data.bookings)) {
+      const { error } = await sb.from('bookings').upsert(data.bookings);
+      if (error) throw error;
+      count += data.bookings.length;
+    }
+    if (Array.isArray(data.recurring_requests)) {
+      const { error } = await sb.from('recurring_requests').upsert(data.recurring_requests);
+      if (error) throw error;
+      count += data.recurring_requests.length;
+    }
+    if (Array.isArray(data.recurring_approved)) {
+      const { error } = await sb.from('recurring_approved').upsert(data.recurring_approved);
+      if (error) throw error;
+      count += data.recurring_approved.length;
+    }
+    toast(`已导入 ${count} 条记录`);
+  } catch (e) {
+    toast('导入失败: ' + e.message, true);
+  }
+};
+
+// Admin tab 切换
+document.querySelectorAll('.admin-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.admin-tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('apanel-' + t.dataset.atab).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

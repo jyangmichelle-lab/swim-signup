@@ -1,0 +1,25 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Local secrets / private notes (never commit)
+.env
+.env.local
+secrets.txt
+private-notes.md
+
+# Local backups downloaded from admin portal
+swim-signup-backup-*.json
+backup-*.json
+
+# Logs
+*.log
+
+# Downloaded archives / source bundles
+*.zip
