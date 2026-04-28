@@ -252,6 +252,11 @@ button.accent:hover { background: #c66647; border-color: #c66647; }
       </div>
     </div>
 
+    <div class="banner error" id="confirm-banner" style="display:none;">
+      <div class="banner-icon">!</div>
+      <div id="confirm-banner-content" style="flex:1;"></div>
+    </div>
+
     <div class="banner" id="auto-banner" style="display:none;">
       <div class="banner-icon">⟳</div>
       <div id="auto-banner-text"></div>
@@ -684,6 +689,7 @@ create table recurring_approved (
   start_date date not null,
   cancelled boolean default false,
   cancelled_dates date[] default '{}',
+  confirmed_dates date[] default '{}',     -- v6: website-based confirm 流程
   attendance jsonb default '{}'::jsonb,
   created_at timestamptz default now()
 );
@@ -1059,6 +1065,34 @@ function isSlotReleased(etDate, minute) {
   return releases.some(r => r.date === dateStr && r.minute === minute);
 }
 
+function getReleaseAt(dateStr, minute) {
+  return releases.find(r => r.date === dateStr && r.minute === minute) || null;
+}
+
+// 占座窗口:发布后 24h 内 regular 家长占着座; 24h 后未确认则释放为捡漏
+const HOLD_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+// 给定一个 approved recurring + 日期, 返回这次课的 confirm 状态
+//   'cancelled'  - 家长明确不来 (在 cancelled_dates 里)
+//   'confirmed'  - 家长明确确认 (在 confirmed_dates 里) → 占座
+//   'pending'    - 还没动作, 仍在 24h 占座窗口内 → 占座
+//   'expired'    - 还没动作, 但 24h 已过 → 释放为捡漏
+function recurringConfirmState(approved, dateStr) {
+  if ((approved.cancelled_dates || []).includes(dateStr)) return 'cancelled';
+  if ((approved.confirmed_dates || []).includes(dateStr)) return 'confirmed';
+  // 看 release.created_at, 如果没有 release 就当占座(legacy 容错, 防止历史数据被错误释放)
+  const release = getReleaseAt(dateStr, approved.minute);
+  if (!release || !release.created_at) return 'pending';
+  const elapsed = Date.now() - new Date(release.created_at).getTime();
+  return elapsed < HOLD_WINDOW_MS ? 'pending' : 'expired';
+}
+
+// 是否仍占座(给 getBookingAt 用)
+function recurringHoldsSlot(approved, dateStr) {
+  const s = recurringConfirmState(approved, dateStr);
+  return s === 'confirmed' || s === 'pending';
+}
+
 function getBookingAt(etDate, minute) {
   const dateStr = fmtDateET(etDate);
   const direct = bookings.find(b => b.date === dateStr && b.minute === minute && !b.cancelled);
@@ -1072,10 +1106,11 @@ function getBookingAt(etDate, minute) {
     if (r.cancelled_dates && r.cancelled_dates.includes(dateStr)) return false;
     return true;
   });
-  if (approved) {
+  if (approved && recurringHoldsSlot(approved, dateStr)) {
     return {
       _kind: 'recurring',
       _autoBooked: true,
+      _confirmState: recurringConfirmState(approved, dateStr),
       id: approved.id,
       date: dateStr,
       minute,
@@ -1095,6 +1130,7 @@ function getBookingAt(etDate, minute) {
 function renderStudentView() {
   document.getElementById('week-label-s').textContent = fmtRangeET(viewWeek);
   renderEmailWhitelistStatus();
+  renderConfirmBanner();
   const picker = document.getElementById('slot-picker');
   picker.innerHTML = '';
 
@@ -1344,6 +1380,86 @@ document.getElementById('btn-book').addEventListener('click', async () => {
   toast(`预约成功${recurMsg}`);
 });
 
+// 显示该家长的待确认 regular 课
+function renderConfirmBanner() {
+  const banner = document.getElementById('confirm-banner');
+  const content = document.getElementById('confirm-banner-content');
+  if (!banner || !content) return;
+  const email = (document.getElementById('s-email').value.trim() || lastEmail).toLowerCase();
+  if (!email || !isWhitelisted(email)) { banner.style.display = 'none'; return; }
+  // 找该 email 名下所有未取消的 approved recurring
+  const myRecurs = recurringApproved.filter(r => !r.cancelled && (r.email || '').toLowerCase() === email);
+  if (!myRecurs.length) { banner.style.display = 'none'; return; }
+  // 对每个 recurring, 扫接下来 14 天的已发布时段, 找状态是 'pending' 的
+  const today = todayET();
+  const pending = []; // [{recur, dateStr, dow}]
+  for (let d = 0; d < 14; d++) {
+    const date = addDaysET(today, d);
+    const dateStr = fmtDateET(date);
+    const dow = dowOfET(date);
+    for (const r of myRecurs) {
+      if (r.dow !== dow) continue;
+      if (r.start_date && r.start_date > dateStr) continue;
+      if (!isSlotReleased(date, r.minute)) continue;
+      const state = recurringConfirmState(r, dateStr);
+      if (state === 'pending') {
+        pending.push({ recur: r, dateStr, dow, minute: r.minute });
+      }
+    }
+  }
+  if (!pending.length) { banner.style.display = 'none'; return; }
+  // 按日期排序
+  pending.sort((a, b) => (a.dateStr + ('00000' + a.minute).slice(-5)).localeCompare(b.dateStr + ('00000' + b.minute).slice(-5)));
+  const escapeHtml = (s) => (s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+  content.innerHTML = `
+    <div style="font-weight:600; margin-bottom:8px;">您有 ${pending.length} 个 regular 课待确认 (24小时内未确认会自动让给其他家长)</div>
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      ${pending.map(p => `
+        <div style="background:rgba(255,255,255,0.6); padding:8px 10px; border-radius:6px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between;">
+          <div>
+            <strong>${p.dateStr.slice(5)} 周${DAYS[p.dow]} ${fmtMin(p.minute)}</strong>
+            · ${escapeHtml(p.recur.child_name)}
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="primary" style="padding:6px 12px; font-size:12px;" onclick="parentConfirmRecur('${p.recur.id}','${p.dateStr}')">✓ 我会来</button>
+            <button class="ghost" style="padding:6px 12px; font-size:12px; color:var(--coral); border-color:var(--coral);" onclick="parentDeclineRecur('${p.recur.id}','${p.dateStr}')">✗ 不来</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  banner.style.display = '';
+}
+
+window.parentConfirmRecur = async function(id, dateStr) {
+  const r = recurringApproved.find(x => x.id === id);
+  if (!r) return;
+  const newDates = [...new Set([...(r.confirmed_dates || []), dateStr])];
+  // 如果之前在 cancelled_dates 里(误点过取消), 一起拿出来
+  const newCancelled = (r.cancelled_dates || []).filter(d => d !== dateStr);
+  const { error } = await sb.from('recurring_approved').update({
+    confirmed_dates: newDates,
+    cancelled_dates: newCancelled
+  }).eq('id', id);
+  if (error) { toast('确认失败: ' + error.message, true); return; }
+  toast(`已确认 ${dateStr} 这次课`);
+};
+
+window.parentDeclineRecur = async function(id, dateStr) {
+  if (!confirm(`确认不来 ${dateStr} 这次课? \n\n点确定后,这个时段会让给其他家长报名。`)) return;
+  const r = recurringApproved.find(x => x.id === id);
+  if (!r) return;
+  const newCancelled = [...new Set([...(r.cancelled_dates || []), dateStr])];
+  // 也从 confirmed_dates 里清除以防之前点过确认又改主意
+  const newConfirmed = (r.confirmed_dates || []).filter(d => d !== dateStr);
+  const { error } = await sb.from('recurring_approved').update({
+    cancelled_dates: newCancelled,
+    confirmed_dates: newConfirmed
+  }).eq('id', id);
+  if (error) { toast('操作失败: ' + error.message, true); return; }
+  toast(`已标记 ${dateStr} 不来,该时段开放给其他家长`);
+};
+
 function renderEmailWhitelistStatus() {
   const email = document.getElementById('s-email').value.trim();
   const status = document.getElementById('s-email-status');
@@ -1369,7 +1485,7 @@ function renderEmailWhitelistStatus() {
     status.style.color = 'var(--coral, #c0392b)';
   }
 }
-document.getElementById('s-email').addEventListener('input', () => { renderMyBookings(); renderAutoBanner(); renderPendingBanner(); renderEmailWhitelistStatus(); });
+document.getElementById('s-email').addEventListener('input', () => { renderMyBookings(); renderAutoBanner(); renderPendingBanner(); renderEmailWhitelistStatus(); renderConfirmBanner(); });
 
 // ============================================================
 //  教练登录
@@ -1468,10 +1584,16 @@ function renderCoachView() {
         if (booking._autoBooked) slotClass += ' auto-booked';
         if (att === 'yes') slotClass += ' attended';
         slotEl.className = slotClass;
+        // confirm 状态徽标(只对 recurring 有意义)
+        let confirmBadge = '';
+        if (booking._kind === 'recurring') {
+          if (booking._confirmState === 'confirmed') confirmBadge = '<span class="slot-badge" style="background:var(--green);" title="家长已确认">✓</span>';
+          else if (booking._confirmState === 'pending') confirmBadge = '<span class="slot-badge" style="background:var(--amber);" title="待确认">?</span>';
+        }
         slotEl.innerHTML = `
           <div class="slot-name">${booking.child_name}</div>
           <div class="slot-parent">${booking.parent_name}</div>
-          ${att === 'yes' ? '<span class="slot-badge">✓</span>' : ''}
+          ${att === 'yes' ? '<span class="slot-badge">✓</span>' : confirmBadge}
         `;
         slotEl.addEventListener('click', (e) => { e.stopPropagation(); openBookingDetail(booking, date); });
         cell.appendChild(slotEl);
@@ -1564,15 +1686,42 @@ function renderRecurringList() {
     list.innerHTML = '<div class="empty">还没有批准的循环预约</div>';
     return;
   }
-  list.innerHTML = approved.map(r => `
-    <div class="booking-item recurring">
-      <div>
-        <div class="when">${r.child_name} · 每周${DAYS[r.dow]} ${fmtMin(r.minute)}</div>
-        <div class="who">${r.parent_name} · ${r.phone} · 自 ${r.start_date}</div>
+  // 给每个循环算未来 14 天内已发布的具体日期 + 各自 confirm 状态
+  const today = todayET();
+  const stateColor = {
+    confirmed: 'var(--green)',
+    pending: 'var(--amber)',
+    expired: 'var(--coral)',
+    cancelled: 'var(--ink-mute)'
+  };
+  const stateLabel = { confirmed: '✓', pending: '?', expired: '⌛', cancelled: '✗' };
+  const stateTitle = { confirmed: '已确认', pending: '待确认(24h窗口内)', expired: '超时未确认→捡漏', cancelled: '家长已取消' };
+
+  list.innerHTML = approved.map(r => {
+    const upcoming = [];
+    for (let d = 0; d < 14; d++) {
+      const date = addDaysET(today, d);
+      if (dowOfET(date) !== r.dow) continue;
+      const dateStr = fmtDateET(date);
+      if (r.start_date && r.start_date > dateStr) continue;
+      if (!isSlotReleased(date, r.minute)) continue;
+      upcoming.push({ dateStr, state: recurringConfirmState(r, dateStr) });
+    }
+    const upcomingHtml = upcoming.length
+      ? upcoming.map(u => `<span title="${u.dateStr} - ${stateTitle[u.state]}" style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:11px; background:${stateColor[u.state]}; color:white; margin:1px 2px;">${u.dateStr.slice(5)} ${stateLabel[u.state]}</span>`).join('')
+      : '<span style="color:var(--ink-mute); font-size:11px;">未来 2 周内还没发布对应时段</span>';
+    return `
+    <div class="booking-item recurring" style="flex-direction:column; align-items:stretch; gap:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+        <div>
+          <div class="when">${r.child_name} · 每周${DAYS[r.dow]} ${fmtMin(r.minute)}</div>
+          <div class="who">${r.parent_name} · ${r.phone} · 自 ${r.start_date}</div>
+        </div>
+        <button class="ghost" style="padding:6px 12px; font-size:12px;" onclick="cancelRecurringApproved('${r.id}')">结束循环</button>
       </div>
-      <button class="ghost" style="padding:6px 12px; font-size:12px;" onclick="cancelRecurringApproved('${r.id}')">结束循环</button>
-    </div>
-  `).join('');
+      <div style="font-size:11px; color:var(--ink-mute);">未来 2 周状态: ${upcomingHtml}</div>
+    </div>`;
+  }).join('');
 }
 
 window.cancelRecurringApproved = async function(id) {

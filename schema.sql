@@ -90,7 +90,8 @@ create table recurring_approved (
   phone text not null,
   start_date date not null,
   cancelled boolean default false,
-  cancelled_dates date[] default '{}',
+  cancelled_dates date[] default '{}',     -- 家长明确不来的日期
+  confirmed_dates date[] default '{}',     -- 家长明确确认的日期 (v6: website confirm 流程)
   attendance jsonb default '{}'::jsonb,
   created_at timestamptz default now()
 );

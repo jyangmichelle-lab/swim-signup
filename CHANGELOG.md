@@ -1,6 +1,30 @@
 # Changelog
 
-## v0.5.1 — Swimmer profiles per family (current)
+## v0.6.0 — Website-based 24h confirm flow (current)
+
+Replaces the originally-planned email-based confirmation with an in-app flow. Decision: customer base is small (~20 families) and parents already visit the site weekly to see the schedule, so push notifications via email aren't needed for the confirm path. Email infrastructure deferred indefinitely; can layer on later as nag-only reminders if usage shows parents forget to check.
+
+### Added
+- **`recurring_approved.confirmed_dates`** — array of dates the parent has explicitly confirmed for, parallel to the existing `cancelled_dates`.
+- **24h hold window** — when coach publishes a slot, the matching regular's recurring "holds" the slot for 24 hours from `release.created_at`. After 24h with no confirm/decline, the slot auto-releases (becomes pickup) and any whitelisted parent can grab it.
+- **Parent "待确认" banner** — red banner at top of student view when entering a whitelisted email, listing all pending regular slots in the next 14 days with ✓ 我会来 / ✗ 不来 buttons. Click → updates `confirmed_dates` or `cancelled_dates`.
+- **Coach calendar badge** — recurring slots now show a colored badge: green ✓ for confirmed, amber ? for pending. Expired (auto-released) slots disappear from the recurring's hold and show as available.
+- **循环名单 status timeline** — each recurring shows the next 2 weeks of upcoming dates with their confirm state as colored chips (✓ confirmed / ? pending / ⌛ expired→pickup / ✗ declined), so the coach sees at a glance who hasn't responded.
+
+### Changed
+- `getBookingAt(date, minute)` — recurring slot is only "held" if `confirmed_dates` contains the date OR we're still within the 24h window after `release.created_at`. Past 24h without confirm = the recurring effectively isn't booking that slot.
+- Slot returned from `getBookingAt` for recurring now includes `_confirmState` ('confirmed' | 'pending' | 'expired' | 'cancelled') so renderers can distinguish.
+
+### Migration
+- Run `migrations/2026-04-30-recurring-confirm.sql` against the live DB. Idempotent (just adds a column).
+- Schema bumped v5.1 → v6.0.
+- Existing recurrings without `confirmed_dates` will be treated as "pending" for any release older than 24h — meaning they'd auto-release. Since v0.5.x just shipped, the live DB likely has minimal recurring data; if you have any active recurrings before this, ask their parents to re-confirm via the new banner, OR manually add the date to `confirmed_dates` via SQL.
+
+### Known gaps (intentional)
+- No automatic email reminder layer. Parents need to visit the site to see "待确认" banner. Coach can manually nag offline.
+- Auto-pickup transition is computed lazily on render — there's no background job rewriting state. Realtime + frequent renders make this fine in practice; the DB doesn't need cleanup.
+
+## v0.5.1 — Swimmer profiles per family
 
 Coach circled back: she does want per-kid profiles after all so she can see age + season group at a glance. Adds a small `swimmers` table layered on top of the whitelist; one parent email can have multiple swimmers.
 
