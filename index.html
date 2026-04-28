@@ -1180,7 +1180,8 @@ function renderStudentView() {
 }
 
 function renderAutoBanner() {
-  const email = (document.getElementById('s-email').value.trim() || lastEmail).toLowerCase();
+  // 只用 input 框里实际输入的邮箱, 不用 lastEmail 兜底, 避免共用浏览器泄露上一个家长的信息
+  const email = document.getElementById('s-email').value.trim().toLowerCase();
   const banner = document.getElementById('auto-banner');
   if (!email) { banner.style.display = 'none'; return; }
   const auto = [];
@@ -1203,7 +1204,8 @@ function renderAutoBanner() {
 }
 
 function renderPendingBanner() {
-  const email = (document.getElementById('s-email').value.trim() || lastEmail).toLowerCase();
+  // 只用 input 框里实际输入的邮箱, 不用 lastEmail 兜底
+  const email = document.getElementById('s-email').value.trim().toLowerCase();
   const banner = document.getElementById('pending-banner');
   if (!email) { banner.style.display = 'none'; return; }
   const pending = recurringRequests.filter(r => r.email.toLowerCase() === email && r.status === 'pending');
@@ -1216,7 +1218,8 @@ function renderPendingBanner() {
 }
 
 function renderMyBookings() {
-  const email = (document.getElementById('s-email').value.trim() || lastEmail).toLowerCase();
+  // 只用 input 框里实际输入的邮箱, 不用 lastEmail 兜底
+  const email = document.getElementById('s-email').value.trim().toLowerCase();
   const list = document.getElementById('my-bookings');
   if (!email) {
     list.innerHTML = '<div class="empty">填写邮箱后会显示预约</div>';
@@ -1381,11 +1384,13 @@ document.getElementById('btn-book').addEventListener('click', async () => {
 });
 
 // 显示该家长的待确认 regular 课
+// 只有当家长在输入框里**显式**输入了自己的邮箱才显示, 不用 lastEmail 兜底,
+// 否则共用浏览器的人会看到别人的待确认信息
 function renderConfirmBanner() {
   const banner = document.getElementById('confirm-banner');
   const content = document.getElementById('confirm-banner-content');
   if (!banner || !content) return;
-  const email = (document.getElementById('s-email').value.trim() || lastEmail).toLowerCase();
+  const email = document.getElementById('s-email').value.trim().toLowerCase();
   if (!email || !isWhitelisted(email)) { banner.style.display = 'none'; return; }
   // 找该 email 名下所有未取消的 approved recurring
   const myRecurs = recurringApproved.filter(r => !r.cancelled && (r.email || '').toLowerCase() === email);
