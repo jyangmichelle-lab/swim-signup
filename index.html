@@ -248,7 +248,7 @@ button.accent:hover { background: #c66647; border-color: #c66647; }
     <div class="page-header">
       <div>
         <h1 class="page-title">为孩子<em>预约</em>这周的泳课</h1>
-        <p class="page-sub">每节30分钟 · 时间为美东时间(ET) · 提前12小时可自助取消</p>
+        <p class="page-sub">每节30分钟 · 时间为美东时间(ET) · 提前7天可自助取消</p>
       </div>
     </div>
 
@@ -290,6 +290,7 @@ button.accent:hover { background: #c66647; border-color: #c66647; }
           <div class="field">
             <label>家长邮箱</label>
             <input type="email" id="s-email" placeholder="parent@example.com">
+            <div id="s-email-status" style="font-size:11px; margin-top:4px; min-height:14px;"></div>
           </div>
           <div class="field">
             <label>家长电话</label>
@@ -348,6 +349,7 @@ button.accent:hover { background: #c66647; border-color: #c66647; }
       <button class="coach-tab active" data-tab="schedule">课表</button>
       <button class="coach-tab" data-tab="requests">循环申请<span class="badge" id="req-badge" style="display:none;">0</span></button>
       <button class="coach-tab" data-tab="recurring">循环名单</button>
+      <button class="coach-tab" data-tab="whitelist">白名单</button>
     </div>
 
     <div class="coach-panel active" id="panel-schedule">
@@ -397,6 +399,35 @@ button.accent:hover { background: #c66647; border-color: #c66647; }
         </div>
       </div>
     </div>
+
+    <div class="coach-panel" id="panel-whitelist">
+      <div class="card">
+        <h3>家长白名单</h3>
+        <p class="help-note">只有白名单内的家长邮箱才能在前台报名/申请循环。<strong>"Regular"</strong> 标记表示该家长享受循环排课优先权(将来 T-10 发布时给他们 24h confirm 窗口)。<br>一家有多个孩子可以共用一个家长邮箱 — 每次预约时家长填上对应孩子的姓名即可。</p>
+
+        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; margin-bottom:14px; padding:12px; background:var(--paper-warm); border-radius:8px;">
+          <div style="flex:1; min-width:160px;">
+            <label style="font-size:11px; color:var(--ink-mute); display:block;">邮箱 *</label>
+            <input id="wl-email" type="email" placeholder="parent@example.com" style="width:100%;">
+          </div>
+          <div style="flex:1; min-width:120px;">
+            <label style="font-size:11px; color:var(--ink-mute); display:block;">家长姓名 *</label>
+            <input id="wl-parent" type="text" placeholder="张三妈妈" style="width:100%;">
+          </div>
+          <div style="flex:2; min-width:200px;">
+            <label style="font-size:11px; color:var(--ink-mute); display:block;">备注 (孩子名字/电话/赛季等)</label>
+            <input id="wl-notes" type="text" placeholder="孩子: 张小明 / 张小红, 春季队" style="width:100%;">
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; padding-bottom:8px;">
+            <input id="wl-regular" type="checkbox">
+            <label for="wl-regular" style="font-size:13px;">Regular 学员</label>
+          </div>
+          <button class="primary" onclick="adminAddWhitelist()" style="padding:9px 16px;">加入白名单</button>
+        </div>
+
+        <div style="overflow-x:auto;"><table class="admin-table" id="admin-whitelist-table"></table></div>
+      </div>
+    </div>
   </section>
 
   <!-- ⚡ Admin 超级管理后台 -->
@@ -419,6 +450,7 @@ button.accent:hover { background: #c66647; border-color: #c66647; }
       <button class="admin-tab" data-atab="raw">原始 JSON</button>
       <button class="admin-tab" data-atab="danger">危险区</button>
     </div>
+    <p class="help-note" style="margin-bottom:18px;">家长白名单管理已移到 <strong>教练视图 → 白名单</strong> 标签页(教练和 admin 都可访问)。</p>
 
     <div class="admin-panel active" id="apanel-overview">
       <div class="admin-section">
@@ -500,6 +532,36 @@ button.accent:hover { background: #c66647; border-color: #c66647; }
 
 </main>
 
+<div class="modal-bg" id="modal-swimmers">
+  <div class="modal" style="max-width:560px;">
+    <h2>学员管理</h2>
+    <p class="modal-sub" id="sw-sub"></p>
+    <div id="sw-list" style="margin: 14px 0;"></div>
+
+    <div style="border-top:1px solid var(--line); padding-top:12px; margin-top:12px;">
+      <h4 style="margin-bottom:8px; font-size:13px;">添加新学员</h4>
+      <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:flex-end;">
+        <div style="flex:1; min-width:120px;">
+          <label style="font-size:11px; color:var(--ink-mute); display:block;">姓名 *</label>
+          <input id="sw-name" type="text" placeholder="张小明" style="width:100%;">
+        </div>
+        <div style="width:80px;">
+          <label style="font-size:11px; color:var(--ink-mute); display:block;">出生年</label>
+          <input id="sw-year" type="number" min="1900" max="2100" placeholder="2018" style="width:100%;">
+        </div>
+        <div style="width:70px;">
+          <label style="font-size:11px; color:var(--ink-mute); display:block;">出生月</label>
+          <input id="sw-month" type="number" min="1" max="12" placeholder="5" style="width:100%;">
+        </div>
+        <button class="primary" onclick="adminAddSwimmer()" style="padding:8px 14px;">+ 加入</button>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="ghost" onclick="closeSwimmersModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="modal-detail">
   <div class="modal">
     <h2 id="md-title">课程详情</h2>
@@ -528,7 +590,7 @@ const DAYS = ['一','二','三','四','五','六','日'];
 const SLOT_MINUTES = [];
 for (let h = 7; h <= 20; h++) { SLOT_MINUTES.push(h * 60); SLOT_MINUTES.push(h * 60 + 30); }
 
-// 建表脚本(显示在配置警告中)
+// 建表脚本(显示在配置警告中) - schema v5
 const SQL_SCRIPT = `-- ============================================
 -- 0) Admin 名单(超级管理员,如开发者本人)
 -- ============================================
@@ -545,16 +607,42 @@ as $$
   select exists (select 1 from app_admins where user_id = auth.uid());
 $$;
 
--- 1) 释放表(教练发布的可预约时段)
+-- 1) 家长白名单 (v5: 只有白名单内邮箱能报名)
+create table parents (
+  email text primary key check (email = lower(email)),
+  parent_name text not null,
+  notes text,
+  is_regular boolean default false,
+  added_at timestamptz default now(),
+  added_by uuid references auth.users(id)
+);
+create index on parents (is_regular);
+
+-- 1.1) 学员 (一家可多娃, 同一个家长邮箱)
+create table swimmers (
+  id uuid primary key default gen_random_uuid(),
+  parent_email text not null references parents(email) on update cascade on delete cascade,
+  swimmer_name text not null,
+  birth_year int check (birth_year between 1900 and 2100),
+  birth_month int check (birth_month between 1 and 12),
+  notes text,
+  created_at timestamptz default now()
+);
+create index on swimmers (parent_email);
+
+-- 2) 释放表(教练发布的可预约时段)
 create table releases (
   id uuid primary key default gen_random_uuid(),
   date date not null,
   minute int not null,
+  status text default 'open',
+  confirm_token uuid,
+  confirmed_at timestamptz,
   created_at timestamptz default now(),
   unique(date, minute)
 );
 
--- 2) 单次预约
+-- 3) 单次预约
 create table bookings (
   id uuid primary key default gen_random_uuid(),
   date date not null,
@@ -570,7 +658,7 @@ create table bookings (
 create index on bookings (email);
 create index on bookings (date, minute);
 
--- 3) 循环预约申请
+-- 4) 循环预约申请
 create table recurring_requests (
   id uuid primary key default gen_random_uuid(),
   dow int not null,
@@ -584,7 +672,7 @@ create table recurring_requests (
   created_at timestamptz default now()
 );
 
--- 4) 已批准的循环预约
+-- 5) 已批准的循环预约
 create table recurring_approved (
   id uuid primary key default gen_random_uuid(),
   dow int not null,
@@ -606,6 +694,8 @@ create index on recurring_approved (dow, minute);
 -- 启用 RLS
 -- ============================================
 alter table app_admins enable row level security;
+alter table parents enable row level security;
+alter table swimmers enable row level security;
 alter table releases enable row level security;
 alter table bookings enable row level security;
 alter table recurring_requests enable row level security;
@@ -615,19 +705,33 @@ alter table recurring_approved enable row level security;
 create policy "admin can read admins" on app_admins for select using (is_admin() or user_id = auth.uid());
 create policy "admin can manage admins" on app_admins for all using (is_admin()) with check (is_admin());
 
+-- parents (白名单): 所有人读(家长UI要校验),教练/admin 改
+create policy "anyone read parents" on parents for select using (true);
+create policy "coach manage parents" on parents for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+-- swimmers: 所有人读(家长UI显示自家娃的列表),教练/admin 改
+create policy "anyone read swimmers" on swimmers for select using (true);
+create policy "coach manage swimmers" on swimmers for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
 -- releases: 所有人读,教练写,admin全权
 create policy "anyone read releases" on releases for select using (true);
 create policy "coach write releases" on releases for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
--- bookings: 所有人读+插入,任何人改(包括家长取消),admin 全权
+-- bookings: 所有人读, 白名单邮箱才能插入, 任何人改(家长取消), 教练删
 create policy "anyone read bookings" on bookings for select using (true);
-create policy "anyone insert bookings" on bookings for insert with check (true);
+create policy "whitelisted insert bookings" on bookings for insert with check (
+  auth.role() = 'authenticated'
+  OR exists (select 1 from parents where parents.email = lower(bookings.email))
+);
 create policy "anyone update bookings" on bookings for update using (true) with check (true);
 create policy "coach delete bookings" on bookings for delete using (auth.role() = 'authenticated');
 
--- recurring_requests: 所有人读+插入,教练改,admin全权
+-- recurring_requests: 所有人读, 白名单邮箱才能插入, 教练改/删
 create policy "anyone read requests" on recurring_requests for select using (true);
-create policy "anyone insert requests" on recurring_requests for insert with check (true);
+create policy "whitelisted insert requests" on recurring_requests for insert with check (
+  auth.role() = 'authenticated'
+  OR exists (select 1 from parents where parents.email = lower(recurring_requests.email))
+);
 create policy "coach update requests" on recurring_requests for update using (auth.role() = 'authenticated');
 create policy "coach delete requests" on recurring_requests for delete using (auth.role() = 'authenticated');
 
@@ -640,6 +744,8 @@ create policy "coach delete approved" on recurring_approved for delete using (au
 -- ============================================
 -- 启用 Realtime(教练发布家长立刻看到)
 -- ============================================
+alter publication supabase_realtime add table parents;
+alter publication supabase_realtime add table swimmers;
 alter publication supabase_realtime add table releases;
 alter publication supabase_realtime add table bookings;
 alter publication supabase_realtime add table recurring_requests;
@@ -727,6 +833,8 @@ function setupRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, onRealtimeChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_requests' }, onRealtimeChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_approved' }, onRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'parents' }, onRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'swimmers' }, onRealtimeChange)
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') console.log('[realtime] connected');
     });
@@ -748,32 +856,99 @@ async function onRealtimeChange(payload) {
 // ============================================================
 //  本地缓存(从Supabase拉数据后存这里供渲染)
 // ============================================================
-let releases = [];           // [{date, minute}]
+let releases = [];           // [{date, minute, status, confirm_token, confirmed_at}]
 let bookings = [];           // [{id, date, minute, child_name, ...}]
 let recurringRequests = [];  // [{id, dow, minute, ...status}]
 let recurringApproved = [];  // [{id, dow, minute, cancelled_dates[], attendance{}}]
+let parentsList = [];        // [{email, parent_name, notes, is_regular, ...}] - 白名单
+let parentsByEmail = new Map(); // email(lowercase) -> parent row, 用于快速校验
+let swimmersList = [];       // [{id, parent_email, swimmer_name, birth_year, birth_month, ...}]
+let swimmersByParent = new Map(); // email(lowercase) -> swimmers[]
 
 async function refreshAllData() {
   if (!sb) return;
   try {
-    const [r1, r2, r3, r4] = await Promise.all([
+    const [r1, r2, r3, r4, r5, r6] = await Promise.all([
       sb.from('releases').select('*'),
       sb.from('bookings').select('*').eq('cancelled', false),
       sb.from('recurring_requests').select('*'),
-      sb.from('recurring_approved').select('*').eq('cancelled', false)
+      sb.from('recurring_approved').select('*').eq('cancelled', false),
+      sb.from('parents').select('*'),
+      sb.from('swimmers').select('*')
     ]);
     if (r1.error) throw r1.error;
     if (r2.error) throw r2.error;
     if (r3.error) throw r3.error;
     if (r4.error) throw r4.error;
+    if (r5.error) throw r5.error;
+    if (r6.error) throw r6.error;
     releases = r1.data || [];
     bookings = r2.data || [];
     recurringRequests = r3.data || [];
     recurringApproved = r4.data || [];
+    parentsList = r5.data || [];
+    parentsByEmail = new Map(parentsList.map(p => [p.email.toLowerCase(), p]));
+    swimmersList = r6.data || [];
+    swimmersByParent = new Map();
+    for (const s of swimmersList) {
+      const k = (s.parent_email || '').toLowerCase();
+      if (!swimmersByParent.has(k)) swimmersByParent.set(k, []);
+      swimmersByParent.get(k).push(s);
+    }
+    // 每个家长下的学员按生日先后稳定排序
+    for (const arr of swimmersByParent.values()) {
+      arr.sort((a, b) => {
+        const ay = a.birth_year || 9999, by = b.birth_year || 9999;
+        if (ay !== by) return ay - by;
+        return (a.birth_month || 13) - (b.birth_month || 13);
+      });
+    }
   } catch (err) {
     console.error('refresh error', err);
     toast('数据加载失败: ' + err.message, true);
   }
+}
+
+// 白名单校验:返回 true 表示该邮箱可以报名
+function isWhitelisted(email) {
+  if (!email) return false;
+  return parentsByEmail.has(email.trim().toLowerCase());
+}
+
+// 给定家长邮箱, 返回该家长下的学员数组(按生日排序), 没有则返回 []
+function swimmersOf(email) {
+  if (!email) return [];
+  return swimmersByParent.get(email.trim().toLowerCase()) || [];
+}
+
+// 算当前年龄(基于今天的美东日期 + 学员的生年/月)。生月缺失时假定 1 月。
+function computeAge(birthYear, birthMonth) {
+  if (!birthYear) return null;
+  const t = todayET();
+  const bm = birthMonth || 1;
+  let age = t.y - birthYear;
+  if (t.m < bm) age -= 1; // 还没过生日
+  return age >= 0 ? age : null;
+}
+
+// USA Swimming 标准年龄分组(以当前年龄计算)
+function ageGroup(age) {
+  if (age == null) return null;
+  if (age <= 8) return '8&U';
+  if (age <= 10) return '9-10';
+  if (age <= 12) return '11-12';
+  if (age <= 14) return '13-14';
+  return '15+';
+}
+
+// 把学员渲染成简短说明: "张小明 (8岁 · 9-10组)"
+function fmtSwimmerShort(s) {
+  const age = computeAge(s.birth_year, s.birth_month);
+  const grp = ageGroup(age);
+  const parts = [];
+  if (age != null) parts.push(`${age}岁`);
+  if (grp) parts.push(`${grp}组`);
+  return parts.length ? `${s.swimmer_name} (${parts.join(' · ')})` : s.swimmer_name;
 }
 
 // ============================================================
@@ -836,7 +1011,9 @@ function hoursUntilClass(dateStr, minute) {
   const instant = etDateMinuteToInstant(etDate, minute);
   return (instant.getTime() - Date.now()) / (1000 * 60 * 60);
 }
-function canCancelByParent(dateStr, minute) { return hoursUntilClass(dateStr, minute) >= 12; }
+// 自助取消的截止时间窗(单位:小时)。<= 此截止时间不能再自助取消, 必须联系教练。
+const CANCEL_DEADLINE_HOURS = 24 * 7; // T-7 天
+function canCancelByParent(dateStr, minute) { return hoursUntilClass(dateStr, minute) >= CANCEL_DEADLINE_HOURS; }
 
 // 给定一个 ET 日期, 计算它所在周的周一
 function startOfWeekET(etDate) {
@@ -917,6 +1094,7 @@ function getBookingAt(etDate, minute) {
 // ============================================================
 function renderStudentView() {
   document.getElementById('week-label-s').textContent = fmtRangeET(viewWeek);
+  renderEmailWhitelistStatus();
   const picker = document.getElementById('slot-picker');
   picker.innerHTML = '';
 
@@ -1031,7 +1209,7 @@ function renderMyBookings() {
     const cancelBtn = nextDate
       ? (canCancel
           ? `<button class="ghost" style="padding:5px 10px;font-size:11px;" onclick="parentCancelRecurOnce('${r.id}','${nextDate}')">取消${nextDate.slice(5)}本次</button>`
-          : `<span style="font-size:10px;color:var(--ink-mute);font-style:italic;">距上课&lt;12h<br>请联系教练</span>`)
+          : `<span style="font-size:10px;color:var(--ink-mute);font-style:italic;">距上课&lt;7天<br>请联系教练</span>`)
       : '';
     html += `<div class="booking-item recurring">
       <div>
@@ -1057,7 +1235,7 @@ function renderMyBookings() {
     const canCancel = canCancelByParent(b.date, b.minute);
     const cancelBtn = canCancel
       ? `<button class="ghost" style="padding:5px 10px;font-size:11px;" onclick="parentCancelOneoff('${b.id}')">取消</button>`
-      : `<span style="font-size:10px;color:var(--ink-mute);font-style:italic;">距上课&lt;12h<br>请联系教练</span>`;
+      : `<span style="font-size:10px;color:var(--ink-mute);font-style:italic;">距上课&lt;7天<br>请联系教练</span>`;
     html += `<div class="booking-item">
       <div>
         <div class="when">${b.date} ${fmtMin(b.minute)}</div>
@@ -1078,7 +1256,7 @@ let selectedSlot = null;
 window.parentCancelRecurOnce = async function(id, dateStr) {
   const r = recurringApproved.find(x => x.id === id);
   if (!r) return;
-  if (!canCancelByParent(dateStr, r.minute)) { toast('距上课不足12小时,无法自助取消', true); return; }
+  if (!canCancelByParent(dateStr, r.minute)) { toast('距上课不足7天,无法自助取消,请联系教练', true); return; }
   if (!confirm(`确认取消 ${dateStr} 这次课?(循环下周继续)`)) return;
   const newDates = [...(r.cancelled_dates || []), dateStr];
   const { error } = await sb.from('recurring_approved').update({ cancelled_dates: newDates }).eq('id', id);
@@ -1091,7 +1269,7 @@ window.parentCancelRecurOnce = async function(id, dateStr) {
 window.parentCancelOneoff = async function(id) {
   const b = bookings.find(x => x.id === id);
   if (!b) return;
-  if (!canCancelByParent(b.date, b.minute)) { toast('距上课不足12小时,无法自助取消', true); return; }
+  if (!canCancelByParent(b.date, b.minute)) { toast('距上课不足7天,无法自助取消,请联系教练', true); return; }
   if (!confirm('确认取消这次预约?')) return;
   const { error } = await sb.from('bookings').update({ cancelled: true }).eq('id', id);
   if (error) { toast('取消失败: ' + error.message, true); return; }
@@ -1111,6 +1289,11 @@ document.getElementById('btn-book').addEventListener('click', async () => {
   if (!parentName) return toast('请填写家长姓名', true);
   if (!email) return toast('请填写家长邮箱', true);
   if (!phone) return toast('请填写家长电话', true);
+  // 白名单校验:不在名单上的邮箱直接拦下来。注意 RLS 也会拦,但 UI 提前阻拦体验更好
+  if (!isWhitelisted(email)) {
+    toast('该邮箱不在白名单中,无法报名。请先联系教练添加邮箱。', true);
+    return;
+  }
 
   const [dateStr, minStr] = selectedSlot.split('_');
   const minute = parseInt(minStr);
@@ -1161,7 +1344,32 @@ document.getElementById('btn-book').addEventListener('click', async () => {
   toast(`预约成功${recurMsg}`);
 });
 
-document.getElementById('s-email').addEventListener('input', () => { renderMyBookings(); renderAutoBanner(); renderPendingBanner(); });
+function renderEmailWhitelistStatus() {
+  const email = document.getElementById('s-email').value.trim();
+  const status = document.getElementById('s-email-status');
+  if (!status) return;
+  // 邮箱不像有效格式时不提示, 避免边输入边闪红
+  const looksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (!email || !looksValid) { status.innerHTML = ''; status.style.color = ''; return; }
+  if (parentsByEmail.size === 0) { status.innerHTML = ''; return; } // 白名单还没加载完
+  if (isWhitelisted(email)) {
+    const swimmers = swimmersOf(email);
+    let hint = '';
+    if (swimmers.length) {
+      const names = swimmers.map(s => {
+        const age = computeAge(s.birth_year, s.birth_month);
+        return age != null ? `${s.swimmer_name} (${age}岁)` : s.swimmer_name;
+      }).join(' · ');
+      hint = `<br><span style="color:var(--ink-mute); font-style:normal;">本邮箱名下学员: ${names}</span>`;
+    }
+    status.innerHTML = '✓ 邮箱已在白名单中' + hint;
+    status.style.color = 'var(--green, #2e7d32)';
+  } else {
+    status.innerHTML = '⚠ 此邮箱不在白名单中,请联系教练添加';
+    status.style.color = 'var(--coral, #c0392b)';
+  }
+}
+document.getElementById('s-email').addEventListener('input', () => { renderMyBookings(); renderAutoBanner(); renderPendingBanner(); renderEmailWhitelistStatus(); });
 
 // ============================================================
 //  教练登录
@@ -1199,6 +1407,7 @@ let publishMode = false;
 
 function renderCoachView() {
   if (!coachUser) return;
+  renderAdminWhitelist();  // 白名单标签页(教练和 admin 都能用)
   document.getElementById('week-label-c').textContent = fmtRangeET(viewWeek);
   const grid = document.getElementById('cal-grid');
   grid.innerHTML = '';
@@ -1580,7 +1789,12 @@ document.getElementById('btn-export').addEventListener('click', () => {
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 document.querySelectorAll('.modal-bg').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+  m.addEventListener('click', e => {
+    if (e.target === m) {
+      m.classList.remove('show');
+      if (m.id === 'modal-swimmers') currentSwimmersModalEmail = null;
+    }
+  });
 });
 
 function toast(msg, isError) {
@@ -1617,13 +1831,56 @@ function renderAdminStats() {
   const pendingReqs = recurringRequests.filter(r => r.status === 'pending').length;
   const activeRecur = recurringApproved.filter(r => !r.cancelled).length;
   const futureReleases = releases.filter(r => r.date >= todayStr).length;
+  const regulars = parentsList.filter(p => p.is_regular).length;
   document.getElementById('admin-stats').innerHTML = `
     <div class="stat-card"><div class="num">${upcomingBookings}</div><div class="lbl">未来预约</div></div>
     <div class="stat-card"><div class="num">${pendingReqs}</div><div class="lbl">待审批申请</div></div>
     <div class="stat-card"><div class="num">${activeRecur}</div><div class="lbl">活跃循环</div></div>
     <div class="stat-card"><div class="num">${futureReleases}</div><div class="lbl">未来开放时段</div></div>
-    <div class="stat-card"><div class="num">${bookings.length}</div><div class="lbl">总预约记录</div></div>
+    <div class="stat-card"><div class="num">${parentsList.length}</div><div class="lbl">白名单家长(${regulars} regular)</div></div>
   `;
+}
+
+function renderAdminWhitelist() {
+  const t = document.getElementById('admin-whitelist-table');
+  if (!t) return;
+  const sorted = [...parentsList].sort((a, b) => {
+    // regular 在前, 然后按 added_at 降序
+    if (a.is_regular !== b.is_regular) return a.is_regular ? -1 : 1;
+    return (b.added_at || '').localeCompare(a.added_at || '');
+  });
+
+  const escapeHtml = (s) => (s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+
+  t.innerHTML = `
+    <thead><tr><th>邮箱</th><th>家长姓名</th><th>学员 (年龄/赛季)</th><th>备注</th><th>Regular</th><th>操作</th></tr></thead>
+    <tbody>${sorted.map(p => {
+      const e = p.email.replace(/'/g, "\\'");
+      const swimmers = swimmersOf(p.email);
+      const swimmerChips = swimmers.length
+        ? swimmers.map(s => {
+            const age = computeAge(s.birth_year, s.birth_month);
+            const grp = ageGroup(age);
+            const label = age != null ? `${escapeHtml(s.swimmer_name)} <span style="color:var(--ink-mute);font-size:10px;">${age}岁${grp ? ' · ' + grp : ''}</span>` : escapeHtml(s.swimmer_name);
+            return `<span style="display:inline-block; background:var(--paper-warm); padding:2px 8px; border-radius:10px; margin:1px 2px; font-size:11px;">${label}</span>`;
+          }).join('')
+        : '<span style="color:var(--ink-mute); font-size:11px; font-style:italic;">无学员</span>';
+      return `<tr>
+        <td><code style="font-size:11px;">${escapeHtml(p.email)}</code></td>
+        <td>${escapeHtml(p.parent_name) || '-'}</td>
+        <td>${swimmerChips}<br><button class="ghost" style="margin-top:4px; padding:3px 8px; font-size:10px;" onclick="openSwimmersModal('${e}')">管理学员 (${swimmers.length})</button></td>
+        <td style="max-width:160px; word-break:break-word;">${p.notes ? escapeHtml(p.notes) : '<span style="color:var(--ink-mute);">-</span>'}</td>
+        <td>${p.is_regular ? '<span style="background:#d4edda;color:#155724;padding:2px 6px;border-radius:3px;font-size:10px;">REGULAR</span>' : '<span style="color:var(--ink-mute);font-size:11px;">普通</span>'}</td>
+        <td class="row-actions">
+          <button onclick="adminToggleRegular('${e}', ${!p.is_regular})">${p.is_regular ? '取消Regular' : '设为Regular'}</button>
+          <button onclick="adminEditWhitelistNotes('${e}')">改备注</button>
+          <button onclick="adminRemoveWhitelist('${e}')" style="color:var(--coral);">移出</button>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan=6 class="empty">还没有白名单家长。在上方输入邮箱+姓名,点"加入白名单"。</td></tr>'}</tbody>
+  `;
+  // 如果学员管理 modal 正在打开, 一并刷新里面的列表(realtime 来了之后)
+  if (currentSwimmersModalEmail) renderSwimmersModalList();
 }
 
 function renderAdminOverview() {
@@ -1784,11 +2041,15 @@ window.adminRefreshRaw = async function() {
     timestamp: new Date().toISOString(),
     timezone: TZ,
     counts: {
+      parents: parentsList.length,
+      swimmers: swimmersList.length,
       releases: releases.length,
       bookings: bookings.length,
       recurring_requests: recurringRequests.length,
       recurring_approved: recurringApproved.length
     },
+    parents: parentsList,
+    swimmers: swimmersList,
     releases, bookings,
     recurring_requests: recurringRequests,
     recurring_approved: recurringApproved
@@ -1800,7 +2061,9 @@ window.adminDownloadBackup = async function() {
   await refreshAllData();
   const dump = {
     timestamp: new Date().toISOString(),
-    schema_version: 'v4',
+    schema_version: 'v5.1',
+    parents: parentsList,
+    swimmers: swimmersList,
     releases, bookings,
     recurring_requests: recurringRequests,
     recurring_approved: recurringApproved
@@ -1850,6 +2113,191 @@ window.adminWipeAll = async function() {
   toast('已全部清空');
 };
 
+// 白名单管理
+// 白名单管理 - 教练和 admin 都可访问 (RLS 也只要求认证用户)
+window.adminAddWhitelist = async function() {
+  if (!coachUser) return;
+  const emailRaw = document.getElementById('wl-email').value.trim();
+  const parentName = document.getElementById('wl-parent').value.trim();
+  const notes = document.getElementById('wl-notes').value.trim();
+  const isRegular = document.getElementById('wl-regular').checked;
+  if (!emailRaw) { toast('请填邮箱', true); return; }
+  if (!parentName) { toast('请填家长姓名', true); return; }
+  // 简单邮箱格式校验
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) { toast('邮箱格式不对', true); return; }
+  const email = emailRaw.toLowerCase();
+  const { error } = await sb.from('parents').insert([{
+    email, parent_name: parentName, notes: notes || null, is_regular: isRegular,
+    added_by: coachUser?.id || null
+  }]);
+  if (error) {
+    if (error.code === '23505') toast('该邮箱已在白名单中', true);
+    else toast('添加失败: ' + error.message, true);
+    return;
+  }
+  document.getElementById('wl-email').value = '';
+  document.getElementById('wl-parent').value = '';
+  document.getElementById('wl-notes').value = '';
+  document.getElementById('wl-regular').checked = false;
+  toast(`已加入白名单: ${email}${isRegular ? ' (Regular)' : ''}`);
+};
+
+window.adminToggleRegular = async function(email, makeRegular) {
+  if (!coachUser) return;
+  const { error } = await sb.from('parents').update({ is_regular: makeRegular }).eq('email', email);
+  if (error) { toast('失败: ' + error.message, true); return; }
+  toast(makeRegular ? '已设为 Regular' : '已取消 Regular');
+};
+
+window.adminEditWhitelistNotes = async function(email) {
+  if (!coachUser) return;
+  const cur = parentsByEmail.get(email);
+  const newNotes = prompt(`编辑 ${email} 的备注:`, cur?.notes || '');
+  if (newNotes === null) return; // 取消
+  const { error } = await sb.from('parents').update({ notes: newNotes.trim() || null }).eq('email', email);
+  if (error) { toast('失败: ' + error.message, true); return; }
+  toast('备注已更新');
+};
+
+window.adminRemoveWhitelist = async function(email) {
+  if (!coachUser) return;
+  // 算一下会自动取消多少条记录, 让 admin 知情后再确认
+  const todayStr = fmtDateET(todayET());
+  const futureBookings = bookings.filter(b => !b.cancelled && b.email && b.email.toLowerCase() === email && b.date >= todayStr);
+  const activeRecur = recurringApproved.filter(r => !r.cancelled && r.email && r.email.toLowerCase() === email);
+  const pendingReqs = recurringRequests.filter(r => r.status === 'pending' && r.email && r.email.toLowerCase() === email);
+  let warn = `移出白名单 ${email}?`;
+  if (futureBookings.length || activeRecur.length || pendingReqs.length) {
+    warn += '\n\n以下记录会被自动处理:\n';
+    if (futureBookings.length) warn += `· ${futureBookings.length} 条未来单次预约 → 自动取消\n`;
+    if (activeRecur.length) warn += `· ${activeRecur.length} 条活跃循环 → 自动结束\n`;
+    if (pendingReqs.length) warn += `· ${pendingReqs.length} 条待审批申请 → 拒绝\n`;
+  } else {
+    warn += '\n该家长目前没有未来记录。';
+  }
+  if (!confirm(warn)) return;
+  // 1) 删白名单条目
+  const { error: delErr } = await sb.from('parents').delete().eq('email', email);
+  if (delErr) { toast('删除失败: ' + delErr.message, true); return; }
+  // 2) 自动级联取消(case-insensitive 匹配)
+  if (futureBookings.length) {
+    await sb.from('bookings').update({ cancelled: true })
+      .in('id', futureBookings.map(b => b.id));
+  }
+  if (activeRecur.length) {
+    await sb.from('recurring_approved').update({ cancelled: true })
+      .in('id', activeRecur.map(r => r.id));
+  }
+  if (pendingReqs.length) {
+    await sb.from('recurring_requests').update({ status: 'rejected' })
+      .in('id', pendingReqs.map(r => r.id));
+  }
+  toast(`已移出白名单${(futureBookings.length || activeRecur.length || pendingReqs.length) ? ',相关记录已处理' : ''}`);
+};
+
+// 学员管理 (modal 内, 教练/admin 可用)
+let currentSwimmersModalEmail = null;
+
+window.openSwimmersModal = function(email) {
+  if (!coachUser) { toast('请先登录教练账号', true); return; }
+  currentSwimmersModalEmail = email;
+  const parent = parentsByEmail.get(email);
+  document.getElementById('sw-sub').textContent = parent ? `${parent.parent_name} · ${email}` : email;
+  document.getElementById('sw-name').value = '';
+  document.getElementById('sw-year').value = '';
+  document.getElementById('sw-month').value = '';
+  renderSwimmersModalList();
+  document.getElementById('modal-swimmers').classList.add('show');
+};
+
+window.closeSwimmersModal = function() {
+  document.getElementById('modal-swimmers').classList.remove('show');
+  currentSwimmersModalEmail = null;
+};
+
+function renderSwimmersModalList() {
+  const list = document.getElementById('sw-list');
+  if (!currentSwimmersModalEmail || !list) return;
+  const swimmers = swimmersOf(currentSwimmersModalEmail);
+  if (!swimmers.length) {
+    list.innerHTML = '<div class="empty" style="padding:18px; text-align:center; color:var(--ink-mute);">该家长名下还没有学员。在下方加。</div>';
+    return;
+  }
+  const escapeHtml = (s) => (s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+  list.innerHTML = `<table class="admin-table">
+    <thead><tr><th>姓名</th><th>出生年月</th><th>当前年龄/赛季</th><th>操作</th></tr></thead>
+    <tbody>${swimmers.map(s => {
+      const age = computeAge(s.birth_year, s.birth_month);
+      const grp = ageGroup(age);
+      const ageInfo = age != null ? `${age}岁 · ${grp || '?'}组` : '<span style="color:var(--ink-mute);">未填生日</span>';
+      const dob = s.birth_year ? `${s.birth_year}-${String(s.birth_month || '?').padStart(2,'0')}` : '-';
+      return `<tr>
+        <td><strong>${escapeHtml(s.swimmer_name)}</strong></td>
+        <td>${dob}</td>
+        <td>${ageInfo}</td>
+        <td class="row-actions">
+          <button onclick="adminEditSwimmer('${s.id}')">编辑</button>
+          <button onclick="adminDeleteSwimmer('${s.id}', '${escapeHtml(s.swimmer_name).replace(/'/g, "\\'")}')" style="color:var(--coral);">删除</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+window.adminAddSwimmer = async function() {
+  if (!coachUser || !currentSwimmersModalEmail) return;
+  const name = document.getElementById('sw-name').value.trim();
+  const yearStr = document.getElementById('sw-year').value.trim();
+  const monthStr = document.getElementById('sw-month').value.trim();
+  if (!name) { toast('请填学员姓名', true); return; }
+  const year = yearStr ? parseInt(yearStr) : null;
+  const month = monthStr ? parseInt(monthStr) : null;
+  if (year !== null && (isNaN(year) || year < 1900 || year > 2100)) { toast('出生年不合法', true); return; }
+  if (month !== null && (isNaN(month) || month < 1 || month > 12)) { toast('出生月应为 1-12', true); return; }
+  const { error } = await sb.from('swimmers').insert([{
+    parent_email: currentSwimmersModalEmail,
+    swimmer_name: name,
+    birth_year: year,
+    birth_month: month
+  }]);
+  if (error) { toast('添加失败: ' + error.message, true); return; }
+  document.getElementById('sw-name').value = '';
+  document.getElementById('sw-year').value = '';
+  document.getElementById('sw-month').value = '';
+  toast('已加入学员');
+};
+
+window.adminEditSwimmer = async function(id) {
+  if (!coachUser) return;
+  const s = swimmersList.find(x => x.id === id);
+  if (!s) return;
+  const newName = prompt(`学员姓名:`, s.swimmer_name);
+  if (newName === null) return;
+  const newYearStr = prompt(`出生年(留空表示不填):`, s.birth_year || '');
+  if (newYearStr === null) return;
+  const newMonthStr = prompt(`出生月 1-12 (留空表示不填):`, s.birth_month || '');
+  if (newMonthStr === null) return;
+  const trimmed = newName.trim();
+  if (!trimmed) { toast('姓名不能空', true); return; }
+  const year = newYearStr.trim() ? parseInt(newYearStr) : null;
+  const month = newMonthStr.trim() ? parseInt(newMonthStr) : null;
+  if (year !== null && (isNaN(year) || year < 1900 || year > 2100)) { toast('出生年不合法', true); return; }
+  if (month !== null && (isNaN(month) || month < 1 || month > 12)) { toast('出生月应为 1-12', true); return; }
+  const { error } = await sb.from('swimmers').update({
+    swimmer_name: trimmed, birth_year: year, birth_month: month
+  }).eq('id', id);
+  if (error) { toast('更新失败: ' + error.message, true); return; }
+  toast('已更新');
+};
+
+window.adminDeleteSwimmer = async function(id, displayName) {
+  if (!coachUser) return;
+  if (!confirm(`真的从该家长名下删除学员 ${displayName}? \n\n注意:这只删 profile,不会影响已有的预约记录里的孩子姓名。`)) return;
+  const { error } = await sb.from('swimmers').delete().eq('id', id);
+  if (error) { toast('删除失败: ' + error.message, true); return; }
+  toast('已删除');
+};
+
 window.adminImportBackup = async function() {
   if (!isAdmin) return;
   const file = document.getElementById('admin-import-file').files[0];
@@ -1878,6 +2326,16 @@ window.adminImportBackup = async function() {
       const { error } = await sb.from('recurring_approved').upsert(data.recurring_approved);
       if (error) throw error;
       count += data.recurring_approved.length;
+    }
+    if (Array.isArray(data.parents)) {
+      const { error } = await sb.from('parents').upsert(data.parents);
+      if (error) throw error;
+      count += data.parents.length;
+    }
+    if (Array.isArray(data.swimmers)) {
+      const { error } = await sb.from('swimmers').upsert(data.swimmers);
+      if (error) throw error;
+      count += data.swimmers.length;
     }
     toast(`已导入 ${count} 条记录`);
   } catch (e) {
